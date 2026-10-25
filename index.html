@@ -1,0 +1,748 @@
+<!doctype html>
+<html lang="es">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<meta name="theme-color" content="#0a0e13">
+<title>SILVERGIN Minisumo BLE</title>
+<link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E%3Crect x='6' y='6' width='20' height='20' rx='3' transform='rotate(45 16 16)' fill='%23cbd3de'/%3E%3C/svg%3E">
+<style>
+  :root {
+    color-scheme: dark;
+    --bg: #0a0e13;
+    --panel: #11161e;
+    --panel2: #171e28;
+    --borde: #1f2935;
+    --borde2: #2b3747;
+    --txt: #e6edf3;
+    --muted: #8593a5;
+    --dim: #4b5869;
+    --acc: #7dd3fc;
+    --silver: #cbd3de;
+    --ok: #22c55e;
+    --warn: #f59e0b;
+    --err: #ef4444;
+    --izq: #38bdf8;
+    --der: #f472b6;
+    --mono: ui-monospace, "JetBrains Mono", "Cascadia Code", Consolas, monospace;
+    --radio: 14px;
+  }
+  * { box-sizing: border-box; }
+  html, body { margin: 0; background: var(--bg); color: var(--txt);
+    font-family: system-ui, -apple-system, "Segoe UI", Roboto, sans-serif; font-size: 15px; }
+  body { padding: max(12px, env(safe-area-inset-top)) 16px calc(24px + env(safe-area-inset-bottom)); }
+  .wrap { max-width: 1180px; margin: 0 auto; }
+  button { font: inherit; color: inherit; cursor: pointer; }
+  input { font: inherit; color: inherit; }
+
+  /* Encabezado */
+  header { display: flex; align-items: center; gap: 12px; flex-wrap: wrap;
+    background: var(--panel); border: 1px solid var(--borde); border-radius: var(--radio);
+    padding: 12px 14px; z-index: 5; }
+  @media (min-width: 900px) { header { position: sticky; top: 8px; } }
+  @media (max-width: 520px) { .marca span { display: none; } header { gap: 8px; } }
+  .marca { display: flex; flex-direction: column; margin-right: auto; min-width: 0; }
+  .marca b { letter-spacing: 3px; font-size: 17px; color: var(--silver); }
+  .marca span { color: var(--muted); font-size: 12px; }
+  .pill { border-radius: 999px; padding: 4px 11px; font-size: 12px; font-weight: 700;
+    border: 1px solid currentColor; white-space: nowrap; }
+  .pill.off { color: var(--err); background: rgba(239,68,68,.12); }
+  .pill.on { color: var(--ok); background: rgba(34,197,94,.12); }
+  .pill.demo { color: var(--acc); background: rgba(125,211,252,.12); }
+  .pill.robot { color: var(--silver); background: rgba(203,211,222,.08); }
+  .btn { background: var(--panel2); border: 1px solid var(--borde2); border-radius: 10px;
+    padding: 9px 14px; font-weight: 650; transition: border-color .15s, background .15s; }
+  .btn:hover { border-color: var(--acc); }
+  .btn:disabled { opacity: .45; cursor: not-allowed; }
+  .btn.primario { background: #0c4a6e; border-color: #0284c7; }
+  .btn.chip { padding: 6px 10px; font-size: 13px; border-radius: 8px; }
+
+  /* Rejilla */
+  .grid { display: grid; gap: 12px; margin-top: 12px; grid-template-columns: 1fr; }
+  @media (min-width: 900px) {
+    .grid { grid-template-columns: 1.05fr 1fr; align-items: start; }
+    .col { display: grid; gap: 12px; }
+  }
+  @media (max-width: 899px) { .col { display: contents; } }
+  .card { background: var(--panel); border: 1px solid var(--borde); border-radius: var(--radio);
+    padding: 14px 16px 16px; }
+  .card h2 { margin: 0 0 12px; font-size: 11px; letter-spacing: 2px; color: var(--silver);
+    display: flex; align-items: center; gap: 8px; }
+  .card h2 small { color: var(--dim); font-weight: 500; letter-spacing: 0; font-size: 11px; }
+  .card h2 .der { margin-left: auto; display: flex; gap: 6px; }
+
+  /* Control */
+  .estado { display: grid; grid-template-columns: 1fr auto; gap: 12px; align-items: center; }
+  .chip-estado { font-size: 26px; font-weight: 800; letter-spacing: 4px; text-align: center;
+    border-radius: 12px; padding: 14px 10px; border: 1px solid; transition: all .15s; }
+  .contador { text-align: center; min-width: 96px; }
+  .contador b { display: block; font-family: var(--mono); font-size: 28px; }
+  .contador span { color: var(--muted); font-size: 12px; }
+  .acciones { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; margin-top: 12px; }
+  .grande { border-radius: 12px; padding: 16px; font-size: 18px; font-weight: 800; letter-spacing: 3px; border: 2px solid; }
+  .grande.go { background: #064e3b; border-color: var(--ok); color: #bbf7d0; }
+  .grande.stop { background: #7f1d1d; border-color: var(--err); color: #fff; }
+  .grande:disabled { opacity: .4; }
+  .seg { display: inline-flex; background: var(--panel2); border: 1px solid var(--borde2); border-radius: 10px; padding: 3px; gap: 3px; flex-wrap: wrap; }
+  .seg button { background: transparent; border: 0; border-radius: 7px; padding: 7px 12px; font-weight: 650; color: var(--muted); font-size: 13px; }
+  .seg button.sel { background: #0c4a6e; color: var(--txt); }
+  .fila { display: flex; align-items: center; gap: 10px; flex-wrap: wrap; }
+  .fila + .fila { margin-top: 10px; }
+  .etq { color: var(--muted); font-size: 13px; }
+  .nota { color: var(--dim); font-size: 12px; margin-top: 8px; line-height: 1.4; }
+
+  /* Robot */
+  .robot-box { display: grid; grid-template-columns: 150px 1fr; gap: 14px; align-items: center; }
+  @media (max-width: 420px) { .robot-box { grid-template-columns: 1fr; justify-items: center; } .robot-box > div { width: 100%; } }
+  svg { display: block; }
+
+  /* Sensores */
+  .sensor { display: grid; grid-template-columns: 52px 1fr 64px 76px; gap: 10px; align-items: center; }
+  .sensor + .sensor { margin-top: 10px; }
+  .sensor .nom { font-weight: 800; font-size: 13px; }
+  .barra { position: relative; height: 18px; background: var(--panel2); border-radius: 9px; overflow: hidden; }
+  .barra .relleno { position: absolute; inset: 0 auto 0 0; border-radius: 9px; transition: width .08s linear; }
+  .barra .umbral { position: absolute; top: -2px; bottom: -2px; width: 3px; background: var(--warn); border-radius: 2px; }
+  .val { font-family: var(--mono); font-weight: 700; text-align: right; }
+  .badge { text-align: center; border-radius: 9px; font-size: 11px; font-weight: 800; padding: 4px 0; letter-spacing: 1px; }
+  .badge.blanco { background: #f8fafc; color: #0b0f14; }
+  .badge.negro { background: #0b0f14; color: var(--muted); border: 1px solid var(--borde2); }
+  .calib { display: grid; grid-template-columns: 52px repeat(3, 1fr); gap: 8px; align-items: center; margin-top: 12px; }
+  .calib .cab { color: var(--dim); font-size: 11px; text-align: center; }
+
+  /* Deslizadores */
+  .param + .param { margin-top: 14px; }
+  .param .cab { display: flex; align-items: baseline; justify-content: space-between; gap: 10px; margin-bottom: 6px; }
+  .param .cab label { font-weight: 600; font-size: 14px; }
+  .param .cab label small { color: var(--dim); font-weight: 500; margin-left: 6px; }
+  .num { display: inline-flex; align-items: center; gap: 4px; }
+  .num input { width: 74px; text-align: right; background: var(--panel2); border: 1px solid var(--borde2);
+    border-radius: 8px; padding: 5px 7px; font-family: var(--mono); font-weight: 700; }
+  .num span { color: var(--muted); font-size: 12px; min-width: 22px; }
+  input[type=range] { width: 100%; height: 28px; background: transparent; -webkit-appearance: none; appearance: none; margin: 0; }
+  input[type=range]::-webkit-slider-runnable-track { height: 6px; border-radius: 3px; background: linear-gradient(90deg, var(--c, #0284c7) var(--p, 50%), var(--panel2) var(--p, 50%)); }
+  input[type=range]::-moz-range-track { height: 6px; border-radius: 3px; background: var(--panel2); }
+  input[type=range]::-moz-range-progress { height: 6px; border-radius: 3px; background: var(--c, #0284c7); }
+  input[type=range]::-webkit-slider-thumb { -webkit-appearance: none; width: 22px; height: 22px; border-radius: 50%; background: var(--silver); margin-top: -8px; border: 2px solid var(--bg); }
+  input[type=range]::-moz-range-thumb { width: 18px; height: 18px; border-radius: 50%; background: var(--silver); border: 2px solid var(--bg); }
+  .enlace { display: flex; align-items: center; gap: 8px; margin: 2px 0 12px; }
+  .switch { position: relative; width: 40px; height: 22px; background: var(--panel2); border: 1px solid var(--borde2); border-radius: 999px; }
+  .switch::after { content: ""; position: absolute; top: 2px; left: 2px; width: 16px; height: 16px; border-radius: 50%; background: var(--muted); transition: transform .15s; }
+  .switch.on { background: #0c4a6e; border-color: #0284c7; }
+  .switch.on::after { transform: translateX(18px); background: var(--txt); }
+
+  /* Línea de tiempo del retorno */
+  .tl { display: flex; height: 38px; border-radius: 10px; overflow: hidden; border: 1px solid var(--borde2); margin-bottom: 6px; }
+  .tl div { display: flex; align-items: center; justify-content: center; font-size: 11px; font-weight: 800;
+    letter-spacing: 1px; min-width: 0; overflow: hidden; white-space: nowrap; transition: flex-grow .2s, filter .15s, box-shadow .15s; }
+  .tl .f { background: #3b2a05; color: #fde68a; }
+  .tl .r { background: #3a1212; color: #fecaca; }
+  .tl .g { background: #0c3047; color: #bae6fd; }
+  .tl div.activa { filter: brightness(1.8); box-shadow: inset 0 0 0 2px #fff; }
+  .tl-ms { display: flex; justify-content: space-between; color: var(--dim); font-size: 11px; font-family: var(--mono); }
+
+  /* Consola */
+  details summary { cursor: pointer; color: var(--muted); font-size: 13px; }
+  .log { margin-top: 10px; background: #0b1017; border: 1px solid var(--borde); border-radius: 10px; padding: 8px 10px;
+    font-family: var(--mono); font-size: 12px; height: 160px; overflow: auto; white-space: pre-wrap; }
+  .log .t { color: var(--dim); }
+  .aviso { background: #3b2a05; border: 1px solid var(--warn); color: #fde68a; border-radius: 12px; padding: 10px 12px; margin-top: 12px; font-size: 13px; line-height: 1.45; display: none; }
+  .bloqueado { opacity: .55; pointer-events: none; }
+  .servos { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; margin: 14px 0 16px; }
+  .servo { background: var(--panel2); border: 1px solid var(--borde2); border-radius: 12px; padding: 10px 10px 8px; }
+  .dial { width: 100%; max-width: 160px; margin: 0 auto; }
+  .dial line { transition: transform .15s ease-out; transform-origin: 60px 62px; }
+  .servo-txt { display: flex; justify-content: space-between; align-items: baseline; margin-top: 4px; }
+  .servo-txt span { font-family: var(--mono); font-weight: 700; }
+</style>
+</head>
+<body>
+<div class="wrap">
+  <header>
+    <div class="marca"><b>◆ SILVERGIN</b><span>Minisumo BLE · avance y retorno en el dohyo</span></div>
+    <span class="pill robot" id="pillRobot">ROBOT —</span>
+    <span class="pill off" id="pillCon">DESCONECTADO</span>
+    <button class="btn chip" id="btnDemo" title="Simula el robot para probar la app">Demo</button>
+    <button class="btn primario" id="btnCon">Conectar</button>
+  </header>
+
+  <div class="aviso" id="avisoBT"></div>
+  <div class="aviso" id="avisoReinicio"></div>
+
+  <div class="grid">
+    <div class="col">
+      <!-- Control -->
+      <section class="card">
+        <h2>CONTROL <small id="modoTxt">arranque desde la app</small></h2>
+        <div class="estado">
+          <div class="chip-estado" id="chipEstado">—</div>
+          <div class="contador"><b id="retornos">0</b><span>retornos</span></div>
+        </div>
+        <div class="acciones">
+          <button class="grande go" id="btnGo">INICIAR</button>
+          <button class="grande stop" id="btnStop">DETENER</button>
+        </div>
+        <div class="fila" style="margin-top:14px">
+          <span class="etq">Arranque</span>
+          <div class="seg" data-param="ar">
+            <button data-v="0">App / BTN1</button>
+            <button data-v="1">Módulo ING Maker</button>
+          </div>
+        </div>
+        <div class="param" style="margin-top:14px" data-param="ea" data-label="Espera antes de arrancar" data-unit="ms" data-step="100"></div>
+      </section>
+
+      <!-- Sensores -->
+      <section class="card">
+        <h2>SENSORES DE PISO <small>QRE1113 · blanco &lt; umbral</small></h2>
+        <div class="robot-box">
+          <svg id="svgRobot" width="150" height="150" viewBox="0 0 150 150" aria-label="Vista del robot">
+            <defs>
+              <linearGradient id="gCuerpo" x1="0" y1="0" x2="1" y2="1"><stop offset="0" stop-color="#2a3441"/><stop offset="1" stop-color="#161c25"/></linearGradient>
+              <linearGradient id="gCuchilla" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#e5e9f0"/><stop offset="1" stop-color="#7b8696"/></linearGradient>
+            </defs>
+            <polygon points="36,34 114,34 106,24 44,24" fill="url(#gCuchilla)"/>
+            <rect x="32" y="34" width="86" height="86" rx="10" fill="url(#gCuerpo)" stroke="#3c4a5e"/>
+            <rect id="ruedaI" x="20" y="64" width="14" height="44" rx="4" fill="#0b0f14" stroke="#334155"/>
+            <rect id="ruedaD" x="116" y="64" width="14" height="44" rx="4" fill="#0b0f14" stroke="#334155"/>
+            <rect id="velI" x="22" y="86" width="10" height="0" rx="2" fill="#22c55e"/>
+            <rect id="velD" x="118" y="86" width="10" height="0" rx="2" fill="#22c55e"/>
+            <circle id="pisoI" cx="48" cy="46" r="8" fill="#0b0f14" stroke="#38bdf8" stroke-width="2.5"/>
+            <circle id="pisoD" cx="102" cy="46" r="8" fill="#0b0f14" stroke="#f472b6" stroke-width="2.5"/>
+            <text x="75" y="84" text-anchor="middle" fill="#cbd3de" fill-opacity=".35" font-size="9" font-weight="700" letter-spacing="2">SILVERGIN</text>
+            <text id="txtI" x="27" y="128" text-anchor="middle" fill="#8593a5" font-size="10" font-family="monospace">0</text>
+            <text id="txtD" x="123" y="128" text-anchor="middle" fill="#8593a5" font-size="10" font-family="monospace">0</text>
+            <text x="75" y="14" text-anchor="middle" fill="#8593a5" font-size="9" font-weight="700" letter-spacing="2">▲ FRENTE</text>
+          </svg>
+          <div>
+            <div class="sensor">
+              <span class="nom" style="color:var(--izq)">IZQ</span>
+              <div class="barra"><div class="relleno" id="barI" style="background:var(--izq)"></div><div class="umbral" id="umbI"></div></div>
+              <span class="val" id="valI">—</span>
+              <span class="badge negro" id="bdgI">—</span>
+            </div>
+            <div class="sensor">
+              <span class="nom" style="color:var(--der)">DER</span>
+              <div class="barra"><div class="relleno" id="barD" style="background:var(--der)"></div><div class="umbral" id="umbD"></div></div>
+              <span class="val" id="valD">—</span>
+              <span class="badge negro" id="bdgD">—</span>
+            </div>
+          </div>
+        </div>
+        <div class="param" style="margin-top:16px" data-param="ui" data-label="Umbral izquierdo" data-color="#38bdf8" data-step="10"></div>
+        <div class="param" data-param="ud" data-label="Umbral derecho" data-color="#f472b6" data-step="10"></div>
+        <div class="calib">
+          <span></span><span class="cab">sobre negro</span><span class="cab">sobre blanco</span><span class="cab">umbral</span>
+          <span class="nom" style="color:var(--izq);font-weight:800;font-size:13px">IZQ</span>
+          <button class="btn chip" data-cap="0,negro">■ —</button>
+          <button class="btn chip" data-cap="0,blanco">□ —</button>
+          <button class="btn chip" data-auto="0">Punto medio</button>
+          <span class="nom" style="color:var(--der);font-weight:800;font-size:13px">DER</span>
+          <button class="btn chip" data-cap="1,negro">■ —</button>
+          <button class="btn chip" data-cap="1,blanco">□ —</button>
+          <button class="btn chip" data-auto="1">Punto medio</button>
+        </div>
+        <div class="param" style="margin-top:16px" data-param="cf" data-label="Confirmación" data-unit="lect." data-hint="lecturas seguidas en blanco"></div>
+      </section>
+    </div>
+
+    <div class="col">
+      <!-- Avance -->
+      <section class="card">
+        <h2>AVANCE <small>velocidad de cada motor</small></h2>
+        <div class="enlace"><button class="switch on" id="swEnlace" aria-label="Enlazar motores"></button><span class="etq">Mover los dos juntos</span></div>
+        <div class="param" data-param="v1" data-label="M1 · rueda izquierda" data-unit="%" data-color="#38bdf8"></div>
+        <div class="param" data-param="v2" data-label="M2 · rueda derecha" data-unit="%" data-color="#f472b6"></div>
+        <p class="nota">Si el robot se va hacia la izquierda, sube M1 o baja M2. Desactiva “Mover los dos juntos” para corregir uno solo.</p>
+        <div class="param" style="margin-top:14px" data-param="ra" data-label="Rampa" data-unit="ms" data-color="#a5b4fc" data-step="10" data-hint="de 0 a 100 %"></div>
+        <p class="nota">La rampa suaviza los cambios de velocidad, sobre todo de avance a reversa, para que el pico de corriente no reinicie el ESP32. 0 = sin rampa.</p>
+      </section>
+
+      <!-- Retorno -->
+      <section class="card">
+        <h2>RETORNO <small>al tocar la línea blanca</small></h2>
+        <div class="tl" id="tl"><div class="f" id="tlF">FRENO</div><div class="r" id="tlR">REVERSA</div><div class="g" id="tlG">GIRO</div></div>
+        <div class="tl-ms"><span>0 ms</span><span id="tlTotal">—</span></div>
+        <div style="height:12px"></div>
+        <div class="param" data-param="tf" data-label="Freno" data-unit="ms" data-color="#f59e0b" data-step="5"></div>
+        <div class="param" data-param="vr" data-label="Reversa · velocidad" data-unit="%" data-color="#ef4444"></div>
+        <div class="param" data-param="tr" data-label="Reversa · tiempo" data-unit="ms" data-color="#ef4444" data-step="10"></div>
+        <div class="param" data-param="vg" data-label="Giro · velocidad" data-unit="%" data-color="#38bdf8"></div>
+        <div class="param" data-param="tg" data-label="Giro · tiempo" data-unit="ms" data-color="#38bdf8" data-step="10"></div>
+        <div class="fila" style="margin-top:16px">
+          <span class="etq">Si tocan los dos sensores, girar a la</span>
+          <div class="seg" data-param="gd">
+            <button data-v="0">Derecha</button>
+            <button data-v="1">Izquierda</button>
+            <button data-v="2">Alternar</button>
+          </div>
+        </div>
+        <p class="nota">Con un solo sensor en blanco el robot gira hacia el lado contrario a la línea.</p>
+      </section>
+
+      <!-- Servos -->
+      <section class="card">
+        <h2>SERVOS <small>SG90 · S1 IO13 · S2 IO14</small></h2>
+        <div class="fila">
+          <span class="etq">Al iniciar</span>
+          <div class="seg" data-param="sd">
+            <button data-v="1">Desplegar</button>
+            <button data-v="0">Quedarse en reposo</button>
+          </div>
+        </div>
+        <div class="servos">
+          <div class="servo">
+            <svg viewBox="0 0 120 70" class="dial"><path d="M10 62 A50 50 0 0 1 110 62" fill="none" stroke="#2b3747" stroke-width="6" stroke-linecap="round"/>
+              <line id="agS1" x1="60" y1="62" x2="60" y2="18" stroke="#7dd3fc" stroke-width="5" stroke-linecap="round"/>
+              <circle cx="60" cy="62" r="6" fill="#cbd3de"/></svg>
+            <div class="servo-txt"><b>S1</b><span id="angS1">—</span></div>
+          </div>
+          <div class="servo">
+            <svg viewBox="0 0 120 70" class="dial"><path d="M10 62 A50 50 0 0 1 110 62" fill="none" stroke="#2b3747" stroke-width="6" stroke-linecap="round"/>
+              <line id="agS2" x1="60" y1="62" x2="60" y2="18" stroke="#f472b6" stroke-width="5" stroke-linecap="round"/>
+              <circle cx="60" cy="62" r="6" fill="#cbd3de"/></svg>
+            <div class="servo-txt"><b>S2</b><span id="angS2">—</span></div>
+          </div>
+        </div>
+        <div class="param" data-param="a1" data-label="S1 · reposo" data-unit="°" data-color="#7dd3fc"></div>
+        <div class="param" data-param="b1" data-label="S1 · desplegado" data-unit="°" data-color="#7dd3fc"></div>
+        <div class="param" data-param="a2" data-label="S2 · reposo" data-unit="°" data-color="#f472b6"></div>
+        <div class="param" data-param="b2" data-label="S2 · desplegado" data-unit="°" data-color="#f472b6"></div>
+        <p class="nota">Con el robot detenido, al mover un ángulo el servo lo muestra 1.5 s y regresa a reposo.</p>
+      </section>
+
+      <!-- Guardar -->
+      <section class="card">
+        <h2>PARÁMETROS <small>los cambios se aplican al instante</small></h2>
+        <div class="fila">
+          <button class="btn primario" id="btnGuardar">Guardar en el robot</button>
+          <button class="btn" id="btnLeer">Leer del robot</button>
+          <button class="btn" id="btnFabrica">Valores de fábrica</button>
+        </div>
+        <p class="nota">“Guardar” los escribe en la flash del ESP32-S3 para que se conserven al apagarlo.</p>
+        <details style="margin-top:10px">
+          <summary>Consola</summary>
+          <div class="log" id="log"></div>
+        </details>
+      </section>
+    </div>
+  </div>
+</div>
+
+<script>
+"use strict";
+
+// ================== Configuración ==================
+const NUS = "6e400001-b5a3-f393-e0a9-e50e24dcca9e";
+const NUS_RX = "6e400002-b5a3-f393-e0a9-e50e24dcca9e";   // app -> robot
+const NUS_TX = "6e400003-b5a3-f393-e0a9-e50e24dcca9e";   // robot -> app
+const ADC_MAX = 4095;
+
+// Debe coincidir con la tabla DEFS del firmware
+const PARAMS = {
+  v1: { def: 50,  min: 0, max: 100 },
+  v2: { def: 50,  min: 0, max: 100 },
+  vr: { def: 60,  min: 0, max: 100 },
+  tr: { def: 250, min: 0, max: 2000 },
+  vg: { def: 60,  min: 0, max: 100 },
+  tg: { def: 220, min: 0, max: 2000 },
+  tf: { def: 30,  min: 0, max: 500 },
+  ui: { def: 700, min: 0, max: 4095 },
+  ud: { def: 700, min: 0, max: 4095 },
+  cf: { def: 2,   min: 1, max: 20 },
+  gd: { def: 2,   min: 0, max: 2 },
+  ar: { def: 0,   min: 0, max: 1 },
+  ea: { def: 0,   min: 0, max: 5000 },
+  a1: { def: 0,   min: 0, max: 180 },
+  b1: { def: 90,  min: 0, max: 180 },
+  a2: { def: 0,   min: 0, max: 180 },
+  b2: { def: 90,  min: 0, max: 180 },
+  sd: { def: 1,   min: 0, max: 1 },
+  ra: { def: 80,  min: 0, max: 1000 },
+};
+const ESTADOS = [
+  { n: "PARADO",  c: "#8593a5" },
+  { n: "ESPERA",  c: "#f59e0b" },
+  { n: "AVANCE",  c: "#22c55e" },
+  { n: "FRENO",   c: "#f59e0b" },
+  { n: "REVERSA", c: "#ef4444" },
+  { n: "GIRO",    c: "#7dd3fc" },
+];
+
+const $ = (s, r = document) => r.querySelector(s);
+const $$ = (s, r = document) => [...r.querySelectorAll(s)];
+
+let enlace = null;          // BLE o Demo
+const valores = {};         // parámetros actuales
+for (const k in PARAMS) valores[k] = PARAMS[k].def;
+const historial = [[], []]; // últimas lecturas de piso para calibrar
+const calib = [{}, {}];
+let ultimoEstado = 0;
+
+// ================== Consola ==================
+function log(txt, color) {
+  const el = $("#log");
+  const t = new Date().toLocaleTimeString();
+  const linea = document.createElement("div");
+  linea.innerHTML = `<span class="t">${t}</span>  `;
+  const s = document.createElement("span");
+  s.textContent = txt;
+  if (color) s.style.color = color;
+  linea.appendChild(s);
+  el.appendChild(linea);
+  while (el.childNodes.length > 300) el.removeChild(el.firstChild);
+  el.scrollTop = el.scrollHeight;
+}
+
+// ================== Controles de parámetros ==================
+function crearDeslizador(div) {
+  const k = div.dataset.param, p = PARAMS[k];
+  const unidad = div.dataset.unit || "";
+  const paso = Number(div.dataset.step || 1);
+  const hint = div.dataset.hint ? `<small>${div.dataset.hint}</small>` : "";
+  div.innerHTML = `
+    <div class="cab"><label for="r_${k}">${div.dataset.label}${hint}</label>
+      <span class="num"><input type="number" inputmode="numeric" id="n_${k}" min="${p.min}" max="${p.max}" step="${paso}"><span>${unidad}</span></span></div>
+    <input type="range" id="r_${k}" min="${p.min}" max="${p.max}" step="${paso}">`;
+  const r = $("#r_" + k, div), n = $("#n_" + k, div);
+  if (div.dataset.color) r.style.setProperty("--c", div.dataset.color);
+  r.addEventListener("input", () => cambiarLocal(k, Number(r.value), true));
+  n.addEventListener("change", () => cambiarLocal(k, Number(n.value), true));
+}
+
+function pintarParam(k) {
+  const v = valores[k], p = PARAMS[k];
+  const r = $("#r_" + k), n = $("#n_" + k);
+  if (r && document.activeElement !== r) r.value = v;
+  if (r) r.style.setProperty("--p", ((v - p.min) / (p.max - p.min) * 100) + "%");
+  if (n && document.activeElement !== n) n.value = v;
+  const seg = $(`.seg[data-param="${k}"]`);
+  if (seg) $$("button", seg).forEach(b => b.classList.toggle("sel", Number(b.dataset.v) === v));
+  if (k === "ui" || k === "ud") pintarUmbral();
+  if (["tf", "tr", "tg"].includes(k)) pintarLineaTiempo();
+  if (k === "ar") {
+    $("#modoTxt").textContent = v === 1 ? "arranque con el módulo ING Maker (GO)" : "arranque desde la app o BTN1";
+    $("#btnGo").disabled = v === 1;
+  }
+}
+
+const temporizadores = {};
+function cambiarLocal(k, v, enviarAlRobot) {
+  const p = PARAMS[k];
+  v = Math.round(Math.min(p.max, Math.max(p.min, Number.isFinite(v) ? v : p.def)));
+  valores[k] = v;
+  pintarParam(k);
+  if (enviarAlRobot) {
+    clearTimeout(temporizadores[k]);
+    temporizadores[k] = setTimeout(() => enviar(`P,${k},${v}`), 90);
+  }
+  // Motores enlazados
+  if ($("#swEnlace").classList.contains("on") && (k === "v1" || k === "v2") && enviarAlRobot) {
+    const otro = k === "v1" ? "v2" : "v1";
+    if (valores[otro] !== v) cambiarLocal(otro, v, true);
+  }
+}
+
+function pintarUmbral() {
+  $("#umbI").style.left = `calc(${valores.ui / ADC_MAX * 100}% - 1px)`;
+  $("#umbD").style.left = `calc(${valores.ud / ADC_MAX * 100}% - 1px)`;
+}
+
+function pintarLineaTiempo() {
+  const f = valores.tf, r = valores.tr, g = valores.tg;
+  const total = f + r + g || 1;
+  $("#tlF").style.flexGrow = Math.max(f, 0.001);
+  $("#tlR").style.flexGrow = Math.max(r, 0.001);
+  $("#tlG").style.flexGrow = Math.max(g, 0.001);
+  $("#tlF").textContent = f / total > 0.12 ? "FRENO" : "";
+  $("#tlR").textContent = r / total > 0.14 ? "REVERSA" : "";
+  $("#tlG").textContent = g / total > 0.1 ? "GIRO" : "";
+  $("#tlTotal").textContent = `${f + r + g} ms`;
+}
+
+// ================== Telemetría ==================
+function pintarServo(i, ang) {
+  const s = "S" + (i + 1);
+  if (ang === undefined || ang < 0 || !Number.isFinite(ang)) { $("#ang" + s).textContent = "—"; return; }
+  $("#ang" + s).textContent = ang + "°";
+  $("#ag" + s).style.transform = `rotate(${ang - 90}deg)`;
+}
+
+function telemetria(est, izq, der, m1, m2, ret, s1, s2) {
+  pintarServo(0, s1);
+  pintarServo(1, s2);
+  ultimoEstado = est;
+  const e = ESTADOS[est] || ESTADOS[0];
+  const chip = $("#chipEstado");
+  chip.textContent = e.n;
+  chip.style.color = e.c;
+  chip.style.borderColor = e.c;
+  chip.style.background = e.c + "22";
+  $("#retornos").textContent = ret;
+  $("#tlF").classList.toggle("activa", est === 3);
+  $("#tlR").classList.toggle("activa", est === 4);
+  $("#tlG").classList.toggle("activa", est === 5);
+
+  const sensores = [
+    [izq, valores.ui, "I", "#38bdf8"],
+    [der, valores.ud, "D", "#f472b6"],
+  ];
+  sensores.forEach(([v, u, s], i) => {
+    const blanco = v < u;
+    $("#bar" + s).style.width = (v / ADC_MAX * 100) + "%";
+    $("#val" + s).textContent = v;
+    const b = $("#bdg" + s);
+    b.textContent = blanco ? "BLANCO" : "NEGRO";
+    b.className = "badge " + (blanco ? "blanco" : "negro");
+    $("#piso" + s).setAttribute("fill", blanco ? "#f8fafc" : "#0b0f14");
+    historial[i].push(v);
+    if (historial[i].length > 10) historial[i].shift();
+  });
+
+  [[m1, "I"], [m2, "D"]].forEach(([m, s]) => {
+    const alto = Math.abs(m) / 100 * 21;
+    const r = $("#vel" + s);
+    r.setAttribute("height", alto);
+    r.setAttribute("y", m >= 0 ? 86 - alto : 86);
+    r.setAttribute("fill", m >= 0 ? "#22c55e" : "#f59e0b");
+    $("#txt" + s).textContent = (m > 0 ? "+" : "") + m;
+  });
+}
+
+// ================== Mensajes del robot ==================
+let buffer = "";
+function recibir(texto) {
+  buffer += texto;
+  let i;
+  while ((i = buffer.indexOf("\n")) >= 0) {
+    const linea = buffer.slice(0, i).trim();
+    buffer = buffer.slice(i + 1);
+    if (linea) procesar(linea);
+  }
+  if (buffer.length > 400) buffer = "";
+}
+
+function procesar(linea) {
+  const p = linea.split(",");
+  if (p[0] === "T" && p.length >= 7) {
+    telemetria(...p.slice(1, 9).map(Number));
+  } else if (p[0] === "P" && p.length >= 3 && PARAMS[p[1]]) {
+    cambiarLocal(p[1], Number(p[2]), false);
+  } else if (p[0] === "I" && p.length >= 3) {
+    $("#pillRobot").textContent = `${p[1]} · ${p[2]}`;
+    log(`Robot: ${p[1]} (firmware ${p[2]})`, "#22c55e");
+  } else if (p[0] === "Z" && p.length >= 3) {
+    const causa = p[1], n = Number(p[2]) || 0;
+    const a = $("#avisoReinicio");
+    if (causa === "BROWNOUT") {
+      a.style.display = "block";
+      a.innerHTML = `El robot se reinició por <b>caída de voltaje (brownout)</b>` +
+        (n > 1 ? ` · ${n} veces desde que se encendió` : "") +
+        `. Sube la <b>rampa</b> o el <b>tiempo de freno</b>, revisa la carga de la batería y los capacitores de la alimentación.`;
+      log(`Último reinicio: BROWNOUT (${n} desde que se encendió)`, "#ef4444");
+    } else {
+      a.style.display = "none";
+      log(`Último reinicio: ${causa}`, causa === "ENCENDIDO" || causa === "PIN_RESET" ? "#8593a5" : "#f59e0b");
+    }
+  } else if (linea.startsWith("#")) {
+    log(linea.slice(1).trim(), "#7dd3fc");
+  }
+}
+
+// ================== Envío ==================
+function enviar(cmd) {
+  if (!enlace) return;
+  enlace.enviar(cmd + "\n");
+}
+
+// ================== BLE ==================
+class EnlaceBLE {
+  constructor() { this.cola = Promise.resolve(); this.cod = new TextEncoder(); this.dec = new TextDecoder(); }
+  async conectar() {
+    this.disp = await navigator.bluetooth.requestDevice({
+      filters: [{ namePrefix: "SILVERGIN" }, { services: [NUS] }],
+      optionalServices: [NUS],
+    });
+    this.disp.addEventListener("gattserverdisconnected", () => desconectado("Se perdió la conexión BLE"));
+    const gatt = await this.disp.gatt.connect();
+    const serv = await gatt.getPrimaryService(NUS);
+    this.rx = await serv.getCharacteristic(NUS_RX);
+    this.tx = await serv.getCharacteristic(NUS_TX);
+    await this.tx.startNotifications();
+    this.tx.addEventListener("characteristicvaluechanged", e => recibir(this.dec.decode(e.target.value)));
+    return this.disp.name;
+  }
+  enviar(texto) {
+    const datos = this.cod.encode(texto);
+    this.cola = this.cola.then(() =>
+      this.rx.writeValueWithoutResponse ? this.rx.writeValueWithoutResponse(datos) : this.rx.writeValue(datos)
+    ).catch(e => log("Error al enviar: " + e.message, "#ef4444"));
+  }
+  cerrar() { try { this.disp?.gatt?.disconnect(); } catch (e) {} }
+}
+
+// ================== Demo (robot simulado) ==================
+class EnlaceDemo {
+  constructor() { this.P = { ...valores }; this.est = 0; this.t0 = 0; this.ret = 0; this.giro = 1; this.alt = true; this.m = [0, 0]; this.prox = 0; this.lado = 0; }
+  async conectar() {
+    setTimeout(() => { recibir("I,DRV8871,demo\nZ,BROWNOUT,2\n# Modo demo: robot simulado\n"); }, 50);
+    this.timer = setInterval(() => this.paso(), 100);
+    return "Demo";
+  }
+  enviar(texto) {
+    const l = texto.trim(), p = l.split(",");
+    const resp = s => setTimeout(() => recibir(s + "\n"), 15);
+    if (p[0] === "P" && this.P[p[1]] !== undefined) {
+      const d = PARAMS[p[1]];
+      this.P[p[1]] = Math.min(d.max, Math.max(d.min, Number(p[2])));
+      if (["a1", "b1", "a2", "b2"].includes(p[1])) this.vista = { i: p[1].endsWith("1") ? 0 : 1, v: this.P[p[1]], t: Date.now() };
+      resp(`P,${p[1]},${this.P[p[1]]}`);
+    } else if (p[0] === "G") {
+      Object.keys(this.P).forEach(k => resp(`P,${k},${this.P[k]}`));
+    } else if (p[0] === "R" && this.est === 0) {
+      if (this.P.ar === 1) return resp("# Modo modulo: el arranque lo da GO");
+      this.cambiar(1); this.prox = Date.now() + 1500; resp("# Inicio");
+    } else if (p[0] === "X" && this.est !== 0) {
+      this.cambiar(0); resp("# Detenido");
+    } else if (p[0] === "D") {
+      for (const k in PARAMS) this.P[k] = PARAMS[k].def;
+      Object.keys(this.P).forEach(k => resp(`P,${k},${this.P[k]}`));
+    } else if (p[0] === "W") resp("# Parametros guardados en flash");
+    else if (p[0] === "I") { resp("I,DRV8871,demo"); resp("Z,BROWNOUT,2"); }
+  }
+  cambiar(e) { this.est = e; this.t0 = Date.now(); }
+  paso() {
+    const P = this.P, t = Date.now() - this.t0;
+    let izq = 3300 + Math.round(Math.random() * 120 - 60);
+    let der = 3250 + Math.round(Math.random() * 120 - 60);
+    if (this.est === 2 && Date.now() > this.prox) {
+      this.lado = [1, 2, 3][Math.floor(Math.random() * 3)];
+    }
+    if (this.est === 2 && this.lado) {
+      if (this.lado & 1) izq = 420 + Math.round(Math.random() * 60);
+      if (this.lado & 2) der = 450 + Math.round(Math.random() * 60);
+    }
+    const lI = izq < P.ui, lD = der < P.ud;
+    switch (this.est) {
+      case 0: this.m = [0, 0]; break;
+      case 1: this.m = [0, 0]; if (t >= P.ea) this.cambiar(2); break;
+      case 2:
+        if (lI || lD) {
+          this.ret++; this.lado = 0; this.prox = Date.now() + 1200 + Math.random() * 2500;
+          this.giro = lI && !lD ? 1 : lD && !lI ? -1 : P.gd === 0 ? 1 : P.gd === 1 ? -1 : (this.alt = !this.alt) ? 1 : -1;
+          this.m = [0, 0]; this.cambiar(P.tf > 0 ? 3 : 4);
+        } else this.m = [P.v1, P.v2];
+        break;
+      case 3: this.m = [0, 0]; if (t >= P.tf) this.cambiar(4); break;
+      case 4: this.m = [-P.vr, -P.vr]; if (t >= P.tr) this.cambiar(5); break;
+      case 5: this.m = [this.giro * P.vg, -this.giro * P.vg]; if (t >= P.tg) this.cambiar(2); break;
+    }
+    const desp = P.sd === 1 && this.est !== 0;
+    let s1 = desp ? P.b1 : P.a1, s2 = desp ? P.b2 : P.a2;
+    if (this.est === 0 && this.vista && Date.now() - this.vista.t < 1500) {
+      if (this.vista.i === 0) s1 = this.vista.v; else s2 = this.vista.v;
+    }
+    recibir(`T,${this.est},${izq},${der},${this.m[0]},${this.m[1]},${this.ret},${s1},${s2}\n`);
+  }
+  cerrar() { clearInterval(this.timer); }
+}
+
+// ================== Conexión ==================
+function setConectado(nombre, demo) {
+  const pill = $("#pillCon");
+  if (nombre) {
+    pill.textContent = demo ? "DEMO" : "CONECTADO";
+    pill.className = "pill " + (demo ? "demo" : "on");
+    $("#btnCon").textContent = "Desconectar";
+    $("#btnDemo").style.display = "none";
+  } else {
+    pill.textContent = "DESCONECTADO";
+    pill.className = "pill off";
+    $("#btnCon").textContent = "Conectar";
+    $("#btnDemo").style.display = "";
+    $("#pillRobot").textContent = "ROBOT —";
+    telemetria(0, 0, 0, 0, 0, Number($("#retornos").textContent) || 0);
+    historial[0].length = 0;
+    historial[1].length = 0;
+    $("#chipEstado").textContent = "—";
+  }
+}
+
+function desconectado(motivo) {
+  if (!enlace) return;
+  enlace.cerrar();
+  enlace = null;
+  setConectado(null);
+  log(motivo || "Desconectado", "#f59e0b");
+}
+
+async function conectar(demo) {
+  if (enlace) return desconectado("Desconectado");
+  const e = demo ? new EnlaceDemo() : new EnlaceBLE();
+  try {
+    const nombre = await e.conectar();
+    enlace = e;
+    setConectado(nombre, demo);
+    log(`Conectado a ${nombre}`, "#22c55e");
+    enviar("I");
+    setTimeout(() => enviar("G"), 150);
+  } catch (err) {
+    if (err && err.name !== "NotFoundError") log("No se pudo conectar: " + err.message, "#ef4444");
+  }
+}
+
+// ================== Eventos ==================
+$$(".param").forEach(crearDeslizador);
+$$(".seg").forEach(seg => {
+  const k = seg.dataset.param;
+  $$("button", seg).forEach(b => b.addEventListener("click", () => cambiarLocal(k, Number(b.dataset.v), true)));
+});
+for (const k in PARAMS) pintarParam(k);
+
+$("#btnCon").addEventListener("click", () => conectar(false));
+$("#btnDemo").addEventListener("click", () => conectar(true));
+$("#btnGo").addEventListener("click", () => enviar("R"));
+$("#btnStop").addEventListener("click", () => enviar("X"));
+$("#btnGuardar").addEventListener("click", () => enviar("W"));
+$("#btnLeer").addEventListener("click", () => enviar("G"));
+$("#btnFabrica").addEventListener("click", () => {
+  if (confirm("¿Restaurar los valores de fábrica? (no se guardan en la flash hasta que presiones Guardar)")) enviar("D");
+});
+$("#swEnlace").addEventListener("click", e => e.currentTarget.classList.toggle("on"));
+
+$$("[data-cap]").forEach(b => b.addEventListener("click", () => {
+  const [i, tipo] = b.dataset.cap.split(",");
+  const h = historial[i];
+  if (!h.length) return log("Conecta el robot para capturar lecturas", "#f59e0b");
+  const v = Math.round(h.reduce((a, x) => a + x, 0) / h.length);
+  calib[i][tipo] = v;
+  b.textContent = (tipo === "negro" ? "■ " : "□ ") + v;
+}));
+$$("[data-auto]").forEach(b => b.addEventListener("click", () => {
+  const i = Number(b.dataset.auto), c = calib[i];
+  if (c.negro === undefined || c.blanco === undefined) return log("Captura negro y blanco primero", "#f59e0b");
+  if (c.negro <= c.blanco) return log("Negro debe ser mayor que blanco: revisa el sensor", "#ef4444");
+  cambiarLocal(i === 0 ? "ui" : "ud", Math.round((c.negro + c.blanco) / 2), true);
+}));
+
+// Detener con la tecla Espacio (computadora)
+document.addEventListener("keydown", e => {
+  if (e.code === "Space" && !["INPUT", "BUTTON"].includes(document.activeElement.tagName)) { e.preventDefault(); enviar("X"); }
+});
+
+// Compatibilidad de Web Bluetooth
+if (!navigator.bluetooth) {
+  const ios = /iPhone|iPad|iPod/.test(navigator.userAgent);
+  const a = $("#avisoBT");
+  a.style.display = "block";
+  a.innerHTML = ios
+    ? "Safari en iPhone no soporta Web Bluetooth. Abre esta página en la app <b>Bluefy</b> o usa Chrome en Android o en la computadora. Puedes probar la interfaz con <b>Demo</b>."
+    : "Este navegador no soporta Web Bluetooth. Usa <b>Chrome</b> o <b>Edge</b> (Android, Windows, macOS o Linux) y abre la página por <b>https</b>. Puedes probar la interfaz con <b>Demo</b>.";
+  $("#btnCon").disabled = true;
+}
+setConectado(null);
+pintarLineaTiempo();
+if (new URLSearchParams(location.search).has("demo")) conectar(true);
+</script>
+</body>
+</html>
