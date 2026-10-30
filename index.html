@@ -1,0 +1,2008 @@
+<!doctype html>
+<html lang="es">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<meta name="theme-color" content="#0a0e13">
+<title>SILVERGIN Minisumo BLE</title>
+<link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E%3Crect x='6' y='6' width='20' height='20' rx='3' transform='rotate(45 16 16)' fill='%23cbd3de'/%3E%3C/svg%3E">
+<style>
+  :root {
+    color-scheme: dark;
+    --bg: #0a0e13;
+    --panel: #11161e;
+    --panel2: #171e28;
+    --borde: #1f2935;
+    --borde2: #2b3747;
+    --txt: #e6edf3;
+    --muted: #8593a5;
+    --dim: #4b5869;
+    --acc: #7dd3fc;
+    --silver: #cbd3de;
+    --ok: #22c55e;
+    --warn: #f59e0b;
+    --err: #ef4444;
+    --izq: #38bdf8;
+    --der: #f472b6;
+    --mono: ui-monospace, "JetBrains Mono", "Cascadia Code", Consolas, monospace;
+    --radio: 14px;
+  }
+  * { box-sizing: border-box; }
+  html, body { margin: 0; background: var(--bg); color: var(--txt);
+    font-family: system-ui, -apple-system, "Segoe UI", Roboto, sans-serif; font-size: 15px; }
+  body { padding: max(12px, env(safe-area-inset-top)) 16px calc(24px + env(safe-area-inset-bottom)); }
+  .wrap { max-width: 1180px; margin: 0 auto; }
+  button { font: inherit; color: inherit; cursor: pointer; }
+  input { font: inherit; color: inherit; }
+
+  /* Encabezado */
+  header { display: flex; align-items: center; gap: 12px; flex-wrap: wrap;
+    background: var(--panel); border: 1px solid var(--borde); border-radius: var(--radio);
+    padding: 12px 14px; z-index: 5; }
+  @media (min-width: 900px) { header { position: sticky; top: 8px; } }
+  @media (max-width: 520px) { .marca span { display: none; } header { gap: 8px; } }
+  .marca { display: flex; flex-direction: column; margin-right: auto; min-width: 0; }
+  .marca b { letter-spacing: 3px; font-size: 17px; color: var(--silver); }
+  .marca span { color: var(--muted); font-size: 12px; }
+  .pill { border-radius: 999px; padding: 4px 11px; font-size: 12px; font-weight: 700;
+    border: 1px solid currentColor; white-space: nowrap; }
+  .pill.off { color: var(--err); background: rgba(239,68,68,.12); }
+  .pill.on { color: var(--ok); background: rgba(34,197,94,.12); }
+  .pill.demo { color: var(--acc); background: rgba(125,211,252,.12); }
+  .pill.robot { color: var(--silver); background: rgba(203,211,222,.08); }
+  .btn { background: var(--panel2); border: 1px solid var(--borde2); border-radius: 10px;
+    padding: 9px 14px; font-weight: 650; transition: border-color .15s, background .15s; }
+  .btn:hover { border-color: var(--acc); }
+  .btn:disabled { opacity: .45; cursor: not-allowed; }
+  .btn.primario { background: #0c4a6e; border-color: #0284c7; }
+  .btn.chip { padding: 6px 10px; font-size: 13px; border-radius: 8px; }
+
+  /* Rejilla */
+  .grid { display: grid; gap: 12px; margin-top: 12px; grid-template-columns: minmax(0, 1fr); }
+  @media (min-width: 900px) {
+    .grid { grid-template-columns: 1.05fr 1fr; align-items: start; }
+    .col { display: grid; gap: 12px; }
+  }
+  @media (max-width: 899px) { .col { display: contents; } }
+  .card { background: var(--panel); border: 1px solid var(--borde); border-radius: var(--radio);
+    padding: 14px 16px 16px; }
+  .card h2 { margin: 0 0 12px; font-size: 11px; letter-spacing: 2px; color: var(--silver);
+    display: flex; align-items: center; gap: 8px; }
+  .card h2 small { color: var(--dim); font-weight: 500; letter-spacing: 0; font-size: 11px; }
+  .card h2 .der { margin-left: auto; display: flex; gap: 6px; }
+
+  /* Control */
+  .estado { display: grid; grid-template-columns: 1fr auto; gap: 12px; align-items: center; }
+  .chip-estado { font-size: 26px; font-weight: 800; letter-spacing: 4px; text-align: center;
+    border-radius: 12px; padding: 14px 10px; border: 1px solid; transition: all .15s; }
+  .contador { text-align: center; min-width: 96px; }
+  .contador b { display: block; font-family: var(--mono); font-size: 28px; }
+  .contador span { color: var(--muted); font-size: 12px; }
+  .acciones { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; margin-top: 12px; }
+  .grande { border-radius: 12px; padding: 16px; font-size: 18px; font-weight: 800; letter-spacing: 3px; border: 2px solid; }
+  .grande.go { background: #064e3b; border-color: var(--ok); color: #bbf7d0; }
+  .grande.stop { background: #7f1d1d; border-color: var(--err); color: #fff; }
+  .grande:disabled { opacity: .4; }
+  .seg { display: inline-flex; background: var(--panel2); border: 1px solid var(--borde2); border-radius: 10px; padding: 3px; gap: 3px; flex-wrap: wrap; }
+  .seg button { background: transparent; border: 0; border-radius: 7px; padding: 7px 12px; font-weight: 650; color: var(--muted); font-size: 13px; }
+  .seg button.sel { background: #0c4a6e; color: var(--txt); }
+  .fila { display: flex; align-items: center; gap: 10px; flex-wrap: wrap; }
+  .fila + .fila { margin-top: 10px; }
+  .etq { color: var(--muted); font-size: 13px; }
+  .nota { color: var(--dim); font-size: 12px; margin-top: 8px; line-height: 1.4; }
+
+  /* Robot */
+  .robot-box { display: grid; grid-template-columns: 150px 1fr; gap: 14px; align-items: center; }
+  @media (max-width: 420px) { .robot-box { grid-template-columns: 1fr; justify-items: center; } .robot-box > div { width: 100%; } }
+  svg { display: block; }
+
+  /* Sensores */
+  .sensor { display: grid; grid-template-columns: 52px 1fr 64px 76px; gap: 10px; align-items: center; }
+  .sensor + .sensor { margin-top: 10px; }
+  .sensor .nom { font-weight: 800; font-size: 13px; }
+  .barra { position: relative; height: 18px; background: var(--panel2); border-radius: 9px; overflow: hidden; }
+  .barra .relleno { position: absolute; inset: 0 auto 0 0; border-radius: 9px; transition: width .08s linear; }
+  .barra .umbral { position: absolute; top: -2px; bottom: -2px; width: 3px; background: var(--warn); border-radius: 2px; }
+  .val { font-family: var(--mono); font-weight: 700; text-align: right; }
+  .badge { text-align: center; border-radius: 9px; font-size: 11px; font-weight: 800; padding: 4px 0; letter-spacing: 1px; }
+  .badge.blanco { background: #f8fafc; color: #0b0f14; }
+  .badge.negro { background: #0b0f14; color: var(--muted); border: 1px solid var(--borde2); }
+  .badge.linea { box-shadow: 0 0 0 2px var(--err); }
+  .piso-sens .caja.linea { box-shadow: 0 0 0 2px var(--err); }
+  .calib { display: grid; grid-template-columns: 52px repeat(3, 1fr); gap: 8px; align-items: center; margin-top: 12px; }
+  .calib .cab { color: var(--dim); font-size: 11px; text-align: center; }
+
+  /* Deslizadores */
+  .param + .param { margin-top: 14px; }
+  .param .cab { display: flex; align-items: center; justify-content: space-between; gap: 10px; }
+  .param { border-left: 3px solid var(--c, var(--borde2)); padding-left: 10px; }
+  .stepper { display: flex; align-items: center; gap: 6px; flex-shrink: 0; }
+  .stepper button { width: 40px; height: 40px; border-radius: 10px; border: 1px solid var(--borde2);
+    background: var(--panel2); font-size: 22px; font-weight: 700; line-height: 1; padding: 0;
+    touch-action: manipulation; user-select: none; -webkit-user-select: none; transition: background .1s, border-color .1s; }
+  .stepper button:hover { border-color: var(--acc); }
+  .stepper button:active { background: #0c4a6e; }
+  .stepper button:disabled { opacity: .35; }
+  .stepper input { width: 78px; height: 40px; text-align: center; background: #0b1017; border: 1px solid var(--borde2);
+    border-radius: 10px; font-family: var(--mono); font-weight: 700; font-size: 16px; -moz-appearance: textfield; }
+  .stepper input::-webkit-outer-spin-button, .stepper input::-webkit-inner-spin-button { -webkit-appearance: none; margin: 0; }
+  .stepper input:focus { outline: none; border-color: var(--acc); }
+  .stepper .u { color: var(--muted); font-size: 12px; min-width: 24px; }
+  .param .cab label { font-weight: 600; font-size: 14px; }
+  .param .cab label small { color: var(--dim); font-weight: 500; margin-left: 2px; }
+  .num { display: inline-flex; align-items: center; gap: 4px; }
+  .num input { width: 74px; text-align: right; background: var(--panel2); border: 1px solid var(--borde2);
+    border-radius: 8px; padding: 5px 7px; font-family: var(--mono); font-weight: 700; }
+  .num span { color: var(--muted); font-size: 12px; min-width: 22px; }
+  input[type=range] { width: 100%; height: 28px; background: transparent; -webkit-appearance: none; appearance: none; margin: 0; }
+  input[type=range]::-webkit-slider-runnable-track { height: 6px; border-radius: 3px; background: linear-gradient(90deg, var(--c, #0284c7) var(--p, 50%), var(--panel2) var(--p, 50%)); }
+  input[type=range]::-moz-range-track { height: 6px; border-radius: 3px; background: var(--panel2); }
+  input[type=range]::-moz-range-progress { height: 6px; border-radius: 3px; background: var(--c, #0284c7); }
+  input[type=range]::-webkit-slider-thumb { -webkit-appearance: none; width: 22px; height: 22px; border-radius: 50%; background: var(--silver); margin-top: -8px; border: 2px solid var(--bg); }
+  input[type=range]::-moz-range-thumb { width: 18px; height: 18px; border-radius: 50%; background: var(--silver); border: 2px solid var(--bg); }
+  .enlace { display: flex; align-items: center; gap: 8px; margin: 2px 0 12px; }
+  .switch { position: relative; width: 40px; height: 22px; background: var(--panel2); border: 1px solid var(--borde2); border-radius: 999px; }
+  .switch::after { content: ""; position: absolute; top: 2px; left: 2px; width: 16px; height: 16px; border-radius: 50%; background: var(--muted); transition: transform .15s; }
+  .switch.on { background: #0c4a6e; border-color: #0284c7; }
+  .switch.on::after { transform: translateX(18px); background: var(--txt); }
+
+  /* Línea de tiempo del retorno */
+  .tl { display: flex; height: 38px; border-radius: 10px; overflow: hidden; border: 1px solid var(--borde2); margin-bottom: 6px; }
+  .tl div { display: flex; align-items: center; justify-content: center; font-size: 11px; font-weight: 800;
+    letter-spacing: 1px; min-width: 0; overflow: hidden; white-space: nowrap; transition: flex-grow .2s, filter .15s, box-shadow .15s; }
+  .tl .f { background: #3b2a05; color: #fde68a; }
+  .tl .r { background: #3a1212; color: #fecaca; }
+  .tl .g { background: #0c3047; color: #bae6fd; }
+  .tl div.activa { filter: brightness(1.8); box-shadow: inset 0 0 0 2px #fff; }
+  .tl-ms { display: flex; justify-content: space-between; color: var(--dim); font-size: 11px; font-family: var(--mono); }
+
+  /* Consola */
+  details summary { cursor: pointer; color: var(--muted); font-size: 13px; }
+  .log { margin-top: 10px; background: #0b1017; border: 1px solid var(--borde); border-radius: 10px; padding: 8px 10px;
+    font-family: var(--mono); font-size: 12px; height: 160px; overflow: auto; white-space: pre-wrap; }
+  .log .t { color: var(--dim); }
+  .aviso { background: #3b2a05; border: 1px solid var(--warn); color: #fde68a; border-radius: 12px; padding: 10px 12px; margin-top: 12px; font-size: 13px; line-height: 1.45; display: none; }
+  .bloqueado { opacity: .55; pointer-events: none; }
+  /* Pestañas */
+  .tabs { display: flex; flex-wrap: wrap; gap: 6px; margin-top: 12px; background: var(--panel); border: 1px solid var(--borde);
+    border-radius: 12px; padding: 4px; }
+  .tabs button { flex: 1 1 auto; background: transparent; border: 0; border-radius: 9px; padding: 10px; font-weight: 700;
+    color: var(--muted); letter-spacing: 1px; }
+  .tabs button.sel { background: #0c4a6e; color: var(--txt); }
+  [hidden] { display: none !important; }
+
+  /* Vista Sensores */
+  .sens-grid { display: grid; gap: 12px; margin-top: 12px; grid-template-columns: minmax(0, 1fr); }
+  @media (min-width: 900px) { .sens-grid { grid-template-columns: 1.1fr 1fr; align-items: start; } }
+  .dohyo { width: 100%; max-width: 440px; margin: 0 auto; }
+  .cono { transition: fill .08s, opacity .08s; }
+  .pres-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 8px; }
+  .pres { background: var(--panel2); border: 1px solid var(--borde2); border-radius: 12px; padding: 10px 8px;
+    text-align: center; transition: background .08s, border-color .08s; }
+  .pres b { display: block; font-size: 15px; }
+  .pres span { color: var(--muted); font-size: 12px; }
+  .pres .est { display: block; margin-top: 4px; font-size: 11px; font-weight: 800; letter-spacing: 1px; color: var(--dim); }
+  .pres.on { background: #3a1212; border-color: var(--err); }
+  .pres.on .est { color: #fecaca; }
+  .big { display: flex; align-items: baseline; gap: 6px; }
+  .big b { font-family: var(--mono); font-size: 40px; line-height: 1; }
+  .big span { color: var(--muted); }
+  .chip { display: inline-block; border-radius: 999px; padding: 4px 12px; font-size: 12px; font-weight: 800;
+    letter-spacing: 1px; border: 1px solid currentColor; }
+  canvas.spark { width: 100%; height: 90px; display: block; background: #0b1017; border-radius: 10px; margin-top: 12px; }
+  .piso-sens { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; }
+  .piso-sens .caja { background: var(--panel2); border: 1px solid var(--borde2); border-radius: 12px; padding: 12px; }
+  .piso-sens .caja.blanco { background: #e2e8f0; border-color: #fff; color: #0b0f14; }
+  .piso-sens .caja.blanco span { color: #334155; }
+  .piso-sens b { font-family: var(--mono); font-size: 28px; display: block; }
+
+  /* Seguimiento */
+  .seg-grid { display: grid; gap: 12px; margin-top: 12px; grid-template-columns: minmax(0, 1fr); }
+  @media (min-width: 900px) { .seg-grid { grid-template-columns: 1fr 1fr; align-items: start; } }
+  #svgSeg { width: 100%; max-width: 360px; margin: 6px auto 0; display: block; }
+  #svgSeg .sensor { cursor: pointer; }
+  .decision { display: flex; align-items: center; justify-content: center; gap: 10px; margin-top: 8px;
+    font-weight: 800; letter-spacing: 2px; font-size: 14px; color: var(--muted); }
+  .decision b { font-size: 26px; }
+  .seg.tres { display: grid; grid-template-columns: repeat(3, 1fr); width: 100%; }
+  .seg.tres button { white-space: normal; line-height: 1.25; padding: 8px 6px; }
+  .aviso-pm { display: none; margin-top: 10px; border-radius: 10px; padding: 8px 10px; font-size: 13px;
+    background: #3b2a05; border: 1px solid var(--warn); color: #fde68a; }
+  .leyenda { display: flex; flex-wrap: wrap; gap: 12px; justify-content: center; margin-top: 8px; color: var(--dim); font-size: 11px; }
+  .leyenda i { display: inline-block; width: 10px; height: 10px; border-radius: 3px; margin-right: 5px; vertical-align: -1px; }
+  .btn.vuelta { margin-top: 12px; }
+  /* En el celular: 3 pestañas arriba y 2 abajo */
+  @media (max-width: 520px) {
+    .tabs { display: grid; grid-template-columns: repeat(6, 1fr); gap: 4px; }
+    .tabs button { grid-column: span 2; font-size: 12px; letter-spacing: 0; padding: 10px 4px; }
+    .tabs button:nth-child(n+4) { grid-column: span 3; }
+  }
+  @media (max-width: 380px) { .stepper button { width: 36px; } .stepper input { width: 64px; } }
+
+  /* Estrategia */
+  .estrategias { display: grid; grid-template-columns: repeat(4, 1fr); gap: 8px; margin-top: 14px; }
+  .est { background: var(--panel2); border: 1px solid var(--borde2); border-radius: 12px; padding: 10px 4px 9px;
+    display: flex; flex-direction: column; align-items: center; gap: 5px; min-height: 92px; }
+  .est:hover { border-color: var(--acc); }
+  .est b { font-family: var(--mono); font-size: 24px; line-height: 1; }
+  .est span { font-size: 11px; color: var(--muted); text-align: center; line-height: 1.2; }
+  .est.pend b, .est.pend span { color: var(--dim); }
+  .est.sel { background: #0c4a6e; border-color: #0284c7; }
+  .est.sel b, .est.sel span { color: var(--txt); }
+  .leds { display: flex; gap: 4px; }
+  .leds i { width: 8px; height: 8px; border-radius: 50%; background: #1f2935; border: 1px solid #2b3747; }
+  .leds i.on { background: #22c55e; border-color: #22c55e; }
+  .leds.blink i { animation: parpadeo .5s steps(1) infinite; }
+  @keyframes parpadeo { 50% { background: #22c55e; border-color: #22c55e; } }
+  @media (prefers-reduced-motion: reduce) { .leds.blink i { animation: none; background: #22c55e; border-color: #22c55e; } }
+  .sub { margin: 18px 0 10px; font-size: 11px; letter-spacing: 1.5px; color: var(--muted); font-weight: 700; }
+  .sub:first-of-type { margin-top: 4px; }
+  #svgFlanco { width: 100%; max-width: 380px; display: block; margin: 2px auto 0; }
+  .pasos { margin: 12px 0 0; padding-left: 20px; font-size: 13px; line-height: 1.5; }
+  .pasos li + li { margin-top: 5px; }
+  .pasos b { color: var(--silver); }
+  .desc { font-size: 13px; line-height: 1.55; margin: 0; }
+  .desc + .desc { margin-top: 8px; }
+
+  /* Manejo */
+  .manejo-grid { display: grid; gap: 12px; margin-top: 12px; grid-template-columns: minmax(0, 1fr); }
+  @media (min-width: 900px) { .manejo-grid { grid-template-columns: 1.1fr 1fr; align-items: start; } }
+  .armar { width: 100%; border-radius: 12px; padding: 15px; font-size: 16px; font-weight: 800; letter-spacing: 2px;
+    background: var(--panel2); border: 2px solid var(--borde2); color: var(--muted); }
+  .armar.on { background: #3a2504; border-color: var(--warn); color: #fde68a; }
+  .joy-wrap { display: flex; justify-content: center; margin: 14px 0 6px; }
+  #joy { width: min(100%, 300px); aspect-ratio: 1; touch-action: none; display: block; }
+  .dpad { display: grid; grid-template-columns: repeat(3, 64px); grid-template-rows: repeat(3, 64px); gap: 8px; justify-content: center; margin-top: 10px; }
+  .dpad button { border-radius: 14px; border: 1px solid var(--borde2); background: var(--panel2); font-size: 22px;
+    touch-action: none; user-select: none; -webkit-user-select: none; }
+  .dpad button:disabled { opacity: .35; }
+  .dpad button.activo { background: #0c4a6e; border-color: var(--acc); }
+  .dpad .alto { background: #7f1d1d; border-color: var(--err); font-size: 13px; font-weight: 800; letter-spacing: 1px; }
+  .mbar { display: grid; grid-template-columns: 110px 1fr 54px; gap: 10px; align-items: center; }
+  .mbar + .mbar { margin-top: 10px; }
+  .mbar .pista { position: relative; height: 18px; background: var(--panel2); border-radius: 9px; }
+  .mbar .pista::after { content: ""; position: absolute; left: 50%; top: -3px; bottom: -3px; width: 1px; background: var(--borde2); }
+  .mbar .rel { position: absolute; top: 0; bottom: 0; border-radius: 9px; }
+  .mbar .val { font-family: var(--mono); }
+  .alerta-piso { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; margin-top: 14px; }
+  .alerta-piso div { border-radius: 10px; padding: 8px; text-align: center; font-weight: 800; font-size: 12px; letter-spacing: 1px;
+    background: var(--panel2); border: 1px solid var(--borde2); color: var(--muted); }
+  .alerta-piso div.blanco { background: #f8fafc; color: #0b0f14; border-color: #fff; }
+
+  .servos { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; margin: 14px 0 16px; }
+  .servo { background: var(--panel2); border: 1px solid var(--borde2); border-radius: 12px; padding: 10px 10px 8px; }
+  .dial { width: 100%; max-width: 160px; margin: 0 auto; }
+  .dial line { transition: transform .15s ease-out; transform-origin: 60px 62px; }
+  .servo-txt { display: flex; justify-content: space-between; align-items: baseline; margin-top: 4px; }
+  .servo-txt span { font-family: var(--mono); font-weight: 700; }
+</style>
+</head>
+<body>
+<div class="wrap">
+  <header>
+    <div class="marca"><b>◆ SILVERGIN</b><span>Minisumo BLE · avance y retorno en el dohyo</span></div>
+    <span class="pill robot" id="pillRobot">ROBOT —</span>
+    <span class="pill off" id="pillCon">DESCONECTADO</span>
+    <button class="btn chip" id="btnDemo" title="Simula el robot para probar la app">Demo</button>
+    <button class="btn primario" id="btnCon">Conectar</button>
+  </header>
+
+  <div class="aviso" id="avisoBT"></div>
+  <div class="aviso" id="avisoReinicio"></div>
+
+  <nav class="tabs" role="tablist">
+    <button data-tab="control" class="sel" role="tab">CONTROL</button>
+    <button data-tab="seguimiento" role="tab">SEGUIMIENTO</button>
+    <button data-tab="estrategia" role="tab">ESTRATEGIA</button>
+    <button data-tab="manejo" role="tab">MANEJO</button>
+    <button data-tab="sensores" role="tab">SENSORES</button>
+  </nav>
+
+  <div class="grid" id="vistaControl">
+    <div class="col">
+      <!-- Control -->
+      <section class="card">
+        <h2>CONTROL <small id="modoTxt">arranque desde la app</small></h2>
+        <div class="estado">
+          <div class="chip-estado" id="chipEstado">—</div>
+          <div class="contador"><b id="retornos">0</b><span>retornos</span></div>
+        </div>
+        <div class="acciones">
+          <button class="grande go" id="btnGo">INICIAR</button>
+          <button class="grande stop" id="btnStop">DETENER</button>
+        </div>
+        <div class="fila" style="margin-top:14px">
+          <span class="etq">Arranque</span>
+          <div class="seg" data-param="ar">
+            <button data-v="0">App / BTN1</button>
+            <button data-v="1">Módulo ING Maker</button>
+          </div>
+        </div>
+        <div class="param" style="margin-top:14px" data-param="ea" data-label="Espera antes de arrancar" data-unit="ms" data-step="100"></div>
+      </section>
+
+      <!-- Sensores -->
+      <section class="card">
+        <h2>SENSORES DE PISO <small>QRE1113 · blanco &lt; umbral &lt; negro</small></h2>
+        <div class="fila" style="margin-bottom:12px">
+          <span class="etq">La orilla del dohyo es</span>
+          <div class="seg" data-param="lp"><button data-v="0">Blanca</button><button data-v="1">Negra</button></div>
+        </div>
+        <div class="robot-box">
+          <svg id="svgRobot" width="150" height="150" viewBox="0 0 150 150" aria-label="Vista del robot">
+            <defs>
+              <linearGradient id="gCuerpo" x1="0" y1="0" x2="1" y2="1"><stop offset="0" stop-color="#2a3441"/><stop offset="1" stop-color="#161c25"/></linearGradient>
+              <linearGradient id="gCuchilla" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#e5e9f0"/><stop offset="1" stop-color="#7b8696"/></linearGradient>
+            </defs>
+            <polygon points="36,34 114,34 106,24 44,24" fill="url(#gCuchilla)"/>
+            <rect x="32" y="34" width="86" height="86" rx="10" fill="url(#gCuerpo)" stroke="#3c4a5e"/>
+            <rect id="ruedaI" x="20" y="64" width="14" height="44" rx="4" fill="#0b0f14" stroke="#334155"/>
+            <rect id="ruedaD" x="116" y="64" width="14" height="44" rx="4" fill="#0b0f14" stroke="#334155"/>
+            <rect id="velI" x="22" y="86" width="10" height="0" rx="2" fill="#22c55e"/>
+            <rect id="velD" x="118" y="86" width="10" height="0" rx="2" fill="#22c55e"/>
+            <circle id="pisoI" cx="48" cy="46" r="8" fill="#0b0f14" stroke="#38bdf8" stroke-width="2.5"/>
+            <circle id="pisoD" cx="102" cy="46" r="8" fill="#0b0f14" stroke="#f472b6" stroke-width="2.5"/>
+            <text x="75" y="84" text-anchor="middle" fill="#cbd3de" fill-opacity=".35" font-size="9" font-weight="700" letter-spacing="2">SILVERGIN</text>
+            <text id="txtI" x="27" y="128" text-anchor="middle" fill="#8593a5" font-size="10" font-family="monospace">0</text>
+            <text id="txtD" x="123" y="128" text-anchor="middle" fill="#8593a5" font-size="10" font-family="monospace">0</text>
+            <text x="75" y="14" text-anchor="middle" fill="#8593a5" font-size="9" font-weight="700" letter-spacing="2">▲ FRENTE</text>
+          </svg>
+          <div>
+            <div class="sensor">
+              <span class="nom" style="color:var(--izq)">IZQ</span>
+              <div class="barra"><div class="relleno" id="barI" style="background:var(--izq)"></div><div class="umbral" id="umbI"></div></div>
+              <span class="val" id="valI">—</span>
+              <span class="badge negro" id="bdgI">—</span>
+            </div>
+            <div class="sensor">
+              <span class="nom" style="color:var(--der)">DER</span>
+              <div class="barra"><div class="relleno" id="barD" style="background:var(--der)"></div><div class="umbral" id="umbD"></div></div>
+              <span class="val" id="valD">—</span>
+              <span class="badge negro" id="bdgD">—</span>
+            </div>
+          </div>
+        </div>
+        <div class="param" style="margin-top:16px" data-param="ui" data-label="Umbral izquierdo" data-color="#38bdf8" data-step="10"></div>
+        <div class="param" data-param="ud" data-label="Umbral derecho" data-color="#f472b6" data-step="10"></div>
+        <div class="calib">
+          <span></span><span class="cab">sobre negro</span><span class="cab">sobre blanco</span><span class="cab">umbral</span>
+          <span class="nom" style="color:var(--izq);font-weight:800;font-size:13px">IZQ</span>
+          <button class="btn chip" data-cap="0,negro">■ —</button>
+          <button class="btn chip" data-cap="0,blanco">□ —</button>
+          <button class="btn chip" data-auto="0">Punto medio</button>
+          <span class="nom" style="color:var(--der);font-weight:800;font-size:13px">DER</span>
+          <button class="btn chip" data-cap="1,negro">■ —</button>
+          <button class="btn chip" data-cap="1,blanco">□ —</button>
+          <button class="btn chip" data-auto="1">Punto medio</button>
+        </div>
+        <div class="param" style="margin-top:16px" data-param="cf" data-label="Confirmación" data-unit="lect." data-hint="lecturas seguidas sobre la línea"></div>
+        <p class="nota">El borde rojo marca el sensor que está sobre la línea de la orilla. Calibra igual en los dos casos: el umbral siempre va entre la lectura de blanco y la de negro.</p>
+      </section>
+    </div>
+
+    <div class="col">
+      <!-- Avance -->
+      <section class="card">
+        <h2>AVANCE <small>velocidad de cada motor</small></h2>
+        <div class="enlace"><button class="switch on" id="swEnlace" aria-label="Enlazar motores"></button><span class="etq">Mover los dos juntos</span></div>
+        <div class="param" data-param="v1" data-label="M1 · rueda izquierda" data-unit="%" data-color="#38bdf8"></div>
+        <div class="param" data-param="v2" data-label="M2 · rueda derecha" data-unit="%" data-color="#f472b6"></div>
+        <p class="nota">Deja M1 y M2 iguales y corrige que vaya derecho con la compensación de “Ir derecho”: así se corrigen todos los movimientos, no solo el avance.</p>
+        <div class="param" style="margin-top:14px" data-param="ra" data-label="Rampa" data-unit="ms" data-color="#a5b4fc" data-step="10" data-hint="de 0 a 100 %"></div>
+        <p class="nota">La rampa suaviza los cambios de velocidad, sobre todo de avance a reversa, para que el pico de corriente no reinicie el ESP32. 0 = sin rampa.</p>
+      </section>
+
+      <!-- Ir derecho -->
+      <section class="card">
+        <h2>IR DERECHO <small>compensación de cada motor</small></h2>
+        <p class="nota" style="margin:0 0 12px">Sin encoders, un motor va más rápido que el otro. Baja el % del que va más rápido. Se aplica a todo: avance, ataque, reversa, giros, búsqueda y manejo.</p>
+        <div class="param" data-param="c1" data-label="M1 izquierda · adelante" data-unit="%" data-color="#38bdf8"></div>
+        <div class="param" data-param="c2" data-label="M2 derecha · adelante" data-unit="%" data-color="#f472b6"></div>
+        <div class="param" data-param="c3" data-label="M1 izquierda · atrás" data-unit="%" data-color="#38bdf8"></div>
+        <div class="param" data-param="c4" data-label="M2 derecha · atrás" data-unit="%" data-color="#f472b6"></div>
+        <div class="param" style="--c:#22c55e;margin-top:16px">
+          <div class="cab"><label for="pruebaVel">Prueba · velocidad</label>
+            <div class="stepper"><button type="button" class="menos" id="pruebaVelMenos">−</button>
+              <input type="number" inputmode="numeric" id="pruebaVel" min="10" max="100" step="5" value="50">
+              <button type="button" class="mas" id="pruebaVelMas">+</button><span class="u">%</span></div></div>
+        </div>
+        <div class="param" style="--c:#22c55e;margin-top:14px">
+          <div class="cab"><label for="pruebaMs">Prueba · duración</label>
+            <div class="stepper"><button type="button" class="menos" id="pruebaMsMenos">−</button>
+              <input type="number" inputmode="numeric" id="pruebaMs" min="200" max="5000" step="100" value="1000">
+              <button type="button" class="mas" id="pruebaMsMas">+</button><span class="u">ms</span></div></div>
+        </div>
+        <div class="fila" style="margin-top:14px">
+          <button class="btn primario" id="btnPruebaAd">▲ Probar adelante</button>
+          <button class="btn" id="btnPruebaAt">▼ Probar atrás</button>
+        </div>
+        <p class="nota">Pon el robot en línea recta y presiona Probar. <b>Si se va a la izquierda, baja M2; si se va a la derecha, baja M1.</b> Repite hasta que vaya derecho, y luego haz lo mismo hacia atrás. Si toca la línea de la orilla, la prueba se detiene sola. Calibra a la velocidad a la que más lo vas a usar.</p>
+      </section>
+
+      <!-- Retorno -->
+      <section class="card">
+        <h2>RETORNO <small>al tocar la línea de la orilla</small></h2>
+        <div class="aviso-pm" data-mostrar="mo=2" style="display:block;margin:0 0 12px">El control de borde está apagado (modo <b>Solo seguimiento</b> en la pestaña Seguimiento). El retorno no se usa.</div>
+        <div class="tl" id="tl"><div class="f" id="tlF">FRENO</div><div class="r" id="tlR">REVERSA</div><div class="g" id="tlG">GIRO</div></div>
+        <div class="tl-ms"><span>0 ms</span><span id="tlTotal">—</span></div>
+        <div style="height:12px"></div>
+        <div class="param" data-param="tf" data-label="Freno" data-unit="ms" data-color="#f59e0b" data-step="5"></div>
+        <div class="param" data-param="vr" data-label="Reversa · velocidad" data-unit="%" data-color="#ef4444"></div>
+        <div class="param" data-param="tr" data-label="Reversa · tiempo" data-unit="ms" data-color="#ef4444" data-step="10"></div>
+        <div class="param" data-param="vg" data-label="Giro · velocidad" data-unit="%" data-color="#38bdf8"></div>
+        <div class="param" data-param="tg" data-label="Giro · tiempo" data-unit="ms" data-color="#38bdf8" data-step="10"></div>
+        <div class="fila" style="margin-top:16px">
+          <span class="etq">Si tocan los dos sensores, girar a la</span>
+          <div class="seg" data-param="gd">
+            <button data-v="0">Derecha</button>
+            <button data-v="1">Izquierda</button>
+            <button data-v="2">Alternar</button>
+          </div>
+        </div>
+        <p class="nota">Con un solo sensor sobre la línea, el robot gira hacia el lado contrario a ella.</p>
+      </section>
+
+      <!-- Servos -->
+      <section class="card">
+        <h2>SERVOS <small>SG90 · S1 IO13 · S2 IO14</small></h2>
+        <div class="fila">
+          <span class="etq">Al iniciar</span>
+          <div class="seg" data-param="sd">
+            <button data-v="1">Desplegar</button>
+            <button data-v="0">Quedarse en reposo</button>
+          </div>
+        </div>
+        <div class="servos">
+          <div class="servo">
+            <svg viewBox="0 0 120 70" class="dial"><path d="M10 62 A50 50 0 0 1 110 62" fill="none" stroke="#2b3747" stroke-width="6" stroke-linecap="round"/>
+              <line id="agS1" x1="60" y1="62" x2="60" y2="18" stroke="#7dd3fc" stroke-width="5" stroke-linecap="round"/>
+              <circle cx="60" cy="62" r="6" fill="#cbd3de"/></svg>
+            <div class="servo-txt"><b>S1</b><span id="angS1">—</span></div>
+          </div>
+          <div class="servo">
+            <svg viewBox="0 0 120 70" class="dial"><path d="M10 62 A50 50 0 0 1 110 62" fill="none" stroke="#2b3747" stroke-width="6" stroke-linecap="round"/>
+              <line id="agS2" x1="60" y1="62" x2="60" y2="18" stroke="#f472b6" stroke-width="5" stroke-linecap="round"/>
+              <circle cx="60" cy="62" r="6" fill="#cbd3de"/></svg>
+            <div class="servo-txt"><b>S2</b><span id="angS2">—</span></div>
+          </div>
+        </div>
+        <div class="param" data-param="a1" data-label="S1 · reposo" data-unit="°" data-color="#7dd3fc" data-step="5"></div>
+        <div class="param" data-param="b1" data-label="S1 · desplegado" data-unit="°" data-color="#7dd3fc" data-step="5"></div>
+        <div class="param" data-param="a2" data-label="S2 · reposo" data-unit="°" data-color="#f472b6" data-step="5"></div>
+        <div class="param" data-param="b2" data-label="S2 · desplegado" data-unit="°" data-color="#f472b6" data-step="5"></div>
+        <p class="nota">Con el robot detenido, al mover un ángulo el servo lo muestra 1.5 s y regresa a reposo.</p>
+      </section>
+
+      <!-- Guardar -->
+      <section class="card">
+        <h2>PARÁMETROS <small>los cambios se aplican al instante</small></h2>
+        <div class="fila">
+          <button class="btn primario" id="btnGuardar">Guardar en el robot</button>
+          <button class="btn" id="btnLeer">Leer del robot</button>
+          <button class="btn" id="btnFabrica">Valores de fábrica</button>
+        </div>
+        <p class="nota">“Guardar” los escribe en la flash del ESP32-S3 para que se conserven al apagarlo.</p>
+        <details style="margin-top:10px">
+          <summary>Consola</summary>
+          <div class="log" id="log"></div>
+        </details>
+      </section>
+    </div>
+  </div>
+
+  <!-- ===================== Vista Seguimiento ===================== -->
+  <div class="seg-grid" id="vistaSeguimiento" hidden>
+    <div class="col">
+      <section class="card">
+        <h2>COMBATE <small id="segModoTxt">seguimiento de objetivo</small></h2>
+        <div class="estado">
+          <div class="chip-estado" id="chipEstado2">—</div>
+          <div class="contador"><b id="decisionIcono">—</b><span id="decisionTxt">sin datos</span></div>
+        </div>
+        <div class="acciones">
+          <button class="grande go" id="btnGo2">INICIAR</button>
+          <button class="grande stop" id="btnStop2">DETENER</button>
+        </div>
+        <div class="fila" style="margin-top:14px">
+          <span class="etq">Modo</span>
+          <div class="seg tres" data-param="mo"><button data-v="1">Seguimiento + borde</button><button data-v="2">Solo seguimiento</button><button data-v="0">Solo borde</button></div>
+        </div>
+        <div class="fila">
+          <span class="etq">Prueba sin motores</span>
+          <div class="seg" data-param="pm"><button data-v="0">No</button><button data-v="1">Sí</button></div>
+        </div>
+        <div class="aviso-pm" data-mostrar="mo=2" style="display:block">Solo seguimiento: el robot <b>no</b> revisa la línea de la orilla y puede salirse del dohyo.</div>
+        <div class="aviso-pm" id="avisoPm">Prueba sin motores activa: el robot decide pero no mueve las ruedas. Pasa la mano frente a los sensores y mira la decisión.</div>
+      </section>
+
+      <section class="card">
+        <h2>SENSORES DE PRESENCIA <small>toca un sensor para activarlo o apagarlo</small></h2>
+        <div class="fila">
+          <div class="seg tres" data-param="ns"><button data-v="0">6 paralelos</button><button data-v="1">4: centro + lados 90°</button><button data-v="2">5: 3 al frente + lados 90°</button></div>
+          <button class="btn chip" id="btnTodos">Activar todos</button>
+        </div>
+        <svg id="svgSeg" viewBox="0 0 300 246" aria-label="Sensores de presencia"></svg>
+        <div class="decision"><b id="decisionIcono2">—</b><span id="decisionTxt2">SIN DATOS</span></div>
+        <div class="leyenda">
+          <span><i style="background:#ef4444"></i>confirmado</span>
+          <span><i style="background:#ef444466"></i>detecta</span>
+          <span><i style="background:#3a4556"></i>libre</span>
+          <span><i style="background:#1a2029;border:1px dashed #4b5869"></i>apagado</span>
+        </div>
+        <div class="param" style="margin-top:14px" data-param="cp" data-label="Confirmación" data-unit="lect." data-hint="lecturas seguidas" data-color="#8593a5"></div>
+      </section>
+    </div>
+
+    <div class="col">
+      <section class="card">
+        <h2>ATAQUE Y GIRO</h2>
+        <div class="param" data-param="va" data-label="Velocidad de ataque" data-unit="%" data-color="#ef4444"></div>
+        <div class="param" data-param="gi" data-mostrar="ns=0,2" data-label="Giro hacia S2 / S5" data-unit="%" data-color="#7dd3fc"></div>
+        <div class="param" data-param="ge" data-mostrar="ns=0" data-label="Giro hacia S1 / S6" data-unit="%" data-color="#7dd3fc"></div>
+        <div class="param" data-param="gl" data-mostrar="ns=1,2" data-label="Giro hacia los lados (90°)" data-unit="%" data-color="#7dd3fc"></div>
+        <div class="param" data-param="fe" data-label="Freno al encontrarlo" data-unit="ms" data-step="5" data-color="#f59e0b"></div>
+        <div class="param" data-param="me" data-label="Memoria" data-unit="ms" data-step="10" data-hint="sigue igual tras perderlo" data-color="#a78bfa"></div>
+        <p class="nota">El ataque va recto con la compensación de motores (pestaña Control → Ir derecho). El freno evita que se pase del objetivo al girar.</p>
+      </section>
+
+      <section class="card">
+        <h2>VL53L0X <small>sensor central de distancia</small></h2>
+        <div class="fila">
+          <div class="seg" data-param="te"><button data-v="1">Usar</button><button data-v="0">No usar</button></div>
+          <span class="etq" id="tofAhora">—</span>
+        </div>
+        <div class="param" style="margin-top:12px" data-param="da" data-mostrar="te=1" data-label="Distancia de ataque" data-unit="mm" data-step="10" data-color="#7dd3fc"></div>
+        <p class="nota">Si el VL53L0X ve algo más cerca que esta distancia, cuenta como objetivo al centro.</p>
+      </section>
+
+      <section class="card">
+        <h2>BÚSQUEDA <small>cuando no ve nada</small></h2>
+        <div class="fila">
+          <span class="etq">Sentido</span>
+          <div class="seg" data-param="bd"><button data-v="0">Derecha</button><button data-v="1">Izquierda</button><button data-v="2">Último visto</button></div>
+        </div>
+        <div class="param" style="margin-top:12px" data-param="vb" data-label="Velocidad de giro" data-unit="%" data-color="#a78bfa"></div>
+        <div class="param" data-param="gb" data-label="Ángulo por barrido" data-unit="°" data-step="15" data-color="#a78bfa"></div>
+        <div class="fila" style="margin-top:12px">
+          <span class="etq">Al terminar</span>
+          <div class="seg" data-param="sb"><button data-v="0">Girar de regreso</button><button data-v="1">Avanzar y repetir</button></div>
+        </div>
+        <div class="param" style="margin-top:12px" data-param="ta" data-mostrar="sb=1" data-label="Avance entre barridos" data-unit="ms" data-step="50" data-color="#22c55e"></div>
+        <div class="param" style="margin-top:14px" data-param="mv" data-label="Calibración: ms por vuelta" data-unit="ms" data-step="10" data-color="#8593a5"></div>
+        <button class="btn vuelta" id="btnVuelta">Probar una vuelta</button>
+        <p class="nota">Sin giroscopio, el ángulo se calcula con el tiempo. Con el robot en el dohyo, presiona “Probar una vuelta” y ajusta los ms hasta que dé exactamente 360° a la velocidad de búsqueda. “Girar de regreso” barre la mitad hacia cada lado de donde empezó.</p>
+      </section>
+    </div>
+  </div>
+
+  <!-- ===================== Vista Estrategia ===================== -->
+  <div class="seg-grid" id="vistaEstrategia" hidden>
+    <div class="col">
+      <section class="card">
+        <h2>ESTRATEGIA <small>se aplica al instante · “Guardar en el robot” la conserva</small></h2>
+        <div class="estado">
+          <div class="chip-estado" id="chipEstado3">—</div>
+          <div class="contador"><b id="estNum">1</b><span>estrategia</span></div>
+        </div>
+        <div class="acciones">
+          <button class="grande go" id="btnGo3">INICIAR</button>
+          <button class="grande stop" id="btnStop3">DETENER</button>
+        </div>
+        <div class="estrategias" id="listaEst"></div>
+        <p class="nota">En el robot, con él parado: <b>BTN2</b> = siguiente y <b>BTN3</b> = anterior (se guarda sola). Los 3 LEDs la muestran en binario durante 3 s y al encender: LED1 = 1, LED2 = 2, LED3 = 4; la 8 hace parpadear los tres. Los puntos de cada botón muestran cómo se ve en los LEDs.</p>
+      </section>
+    </div>
+
+    <div class="col">
+      <section class="card">
+        <h2 id="estTitulo">ESTRATEGIA 1</h2>
+        <div data-mostrar="es=1">
+          <p class="desc">Seguimiento condicional, como hasta ahora: gira en su lugar hacia el sensor que lo ve y ataca recto cuando lo tiene al centro. Si el centro y un lado lo ven a la vez, gana el centro.</p>
+          <p class="desc" style="color:var(--muted)">No tiene parámetros propios: usa los de la pestaña Seguimiento.</p>
+        </div>
+        <div data-mostrar="es=2">
+          <svg id="svgFlanco" viewBox="0 0 320 206" role="img" aria-label="Estrategia de flanco: la bandera del rival queda al frente y el rival al costado; el robot gira 90 grados a ciegas y embiste hacia el costado">
+            <defs>
+              <marker id="flechaAz" viewBox="0 0 10 10" refX="8" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse"><path d="M0 0 L10 5 L0 10 z" fill="#7dd3fc"/></marker>
+              <marker id="flechaVe" viewBox="0 0 10 10" refX="8" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse"><path d="M0 0 L10 5 L0 10 z" fill="#22c55e"/></marker>
+            </defs>
+            <!-- rival con su bandera, que cruza frente a este robot -->
+            <line x1="268" y1="116" x2="268" y2="38" stroke="#94a3b8" stroke-width="2"/>
+            <polygon points="268,36 58,47 268,58" fill="#f472b6" fill-opacity=".75" stroke="#f472b6"/>
+            <text x="190" y="28" text-anchor="middle" fill="#f472b6" font-size="11" font-weight="700">bandera del rival</text>
+            <rect x="244" y="116" width="48" height="48" rx="6" fill="#3a1212" stroke="#ef4444" stroke-width="1.5"/>
+            <text x="268" y="144" text-anchor="middle" fill="#fca5a5" font-size="11" font-weight="700">rival</text>
+            <!-- haces de los sensores: S3/S4 chocan con la bandera, S5 con el rival -->
+            <line x1="61" y1="104" x2="61" y2="52" stroke="#ef4444" stroke-width="3" stroke-dasharray="3 4"/>
+            <line x1="77" y1="104" x2="77" y2="53" stroke="#ef4444" stroke-width="3" stroke-dasharray="3 4"/>
+            <line x1="98" y1="140" x2="242" y2="140" stroke="#ef4444" stroke-width="3" stroke-dasharray="3 4"/>
+            <!-- este robot -->
+            <polygon points="42,112 96,112 89,104 49,104" fill="#c9d0da"/>
+            <rect x="40" y="112" width="58" height="56" rx="8" fill="#1e2632" stroke="#3c4a5e"/>
+            <text x="69" y="144" text-anchor="middle" fill="#cbd3de" fill-opacity=".6" font-size="8" font-weight="700" letter-spacing="1">SILVERGIN</text>
+            <!-- 1: giro ciego, 2: embestida -->
+            <path d="M69 88 A52 52 0 0 1 121 140" fill="none" stroke="#7dd3fc" stroke-width="2.5" marker-end="url(#flechaAz)"/>
+            <text x="122" y="96" fill="#7dd3fc" font-size="11" font-weight="700">1 · gira ~90° a ciegas</text>
+            <line x1="104" y1="158" x2="236" y2="158" stroke="#22c55e" stroke-width="2.5" marker-end="url(#flechaVe)"/>
+            <text x="170" y="176" fill="#22c55e" font-size="11" font-weight="700" text-anchor="middle">2 · embiste</text>
+            <text x="160" y="200" text-anchor="middle" fill="#8593a5" font-size="10">el frente ve la bandera · el lateral ve al rival</text>
+          </svg>
+          <ol class="pasos">
+            <li><b>Detecta:</b> uno o más sensores del frente y <b>un</b> lateral a 90° lo ven juntos el tiempo de confirmación. El frente suele ser la bandera; el lateral, el robot.</li>
+            <li><b>Gira a ciegas</b> hacia ese lateral unos 90° sin hacer caso al frente. Si ya venía girando hacia ese lado, solo gira lo que falta.</li>
+            <li><b>Embiste:</b> frena (Freno al encontrarlo) y ataca recto a la velocidad de ataque aunque no vea nada. Solo la línea de la orilla lo detiene.</li>
+            <li>Después sigue como la estrategia 1.</li>
+          </ol>
+          <p class="desc" style="margin-top:10px;color:var(--muted)">No gira si ven <b>los dos</b> laterales (rival de frente con banderas a los dos lados), si el VL53L0X lo tiene muy cerca (ya lo está empujando) o durante la pausa después de otro flanco.</p>
+        </div>
+        <div data-mostrar="es=3,4,5,6,7,8">
+          <p class="desc">Por programar. Mientras tanto se comporta igual que la estrategia 1.</p>
+        </div>
+      </section>
+
+      <section class="card" data-mostrar="es=2">
+        <h2>FLANCO <small>parámetros de la estrategia 2</small></h2>
+        <div class="aviso-pm" data-mostrar="ns=0" style="display:block;margin:0 0 12px">Necesita el modo de <b>4 o 5 sensores</b> (laterales a 90°). Con 6 paralelos se comporta como la estrategia 1. Cámbialo en Seguimiento → Sensores de presencia.</div>
+        <p class="sub">CUÁNDO GIRA</p>
+        <div class="param" data-param="fc" data-label="Confirmación frente + lateral" data-unit="ms" data-step="5" data-hint="juntos" data-color="#f472b6"></div>
+        <div class="param" data-param="fd" data-label="No girar si el VL53L0X mide menos de" data-unit="mm" data-step="10" data-hint="0 = no usar" data-color="#7dd3fc"></div>
+        <div class="param" data-param="fn" data-label="Pausa entre flancos" data-unit="ms" data-step="50" data-color="#8593a5"></div>
+        <p class="sub">GIRO CIEGO</p>
+        <div class="param" data-param="fv" data-label="Velocidad del giro" data-unit="%" data-color="#7dd3fc"></div>
+        <div class="param" data-param="ft" data-label="Tiempo del giro" data-unit="ms" data-step="5" data-hint="~90°" data-color="#7dd3fc"></div>
+        <div class="fila" style="margin-top:12px">
+          <button class="btn" id="btnFlancoIzq">⟲ Probar a la izquierda</button>
+          <button class="btn" id="btnFlancoDer">Probar a la derecha ⟳</button>
+        </div>
+        <p class="nota">Con el robot en el dohyo, prueba el giro y ajusta el tiempo hasta que dé 90° exactos a esa velocidad.</p>
+        <p class="sub">EMBESTIDA</p>
+        <div class="param" data-param="fa" data-label="Ataque comprometido" data-unit="ms" data-step="10" data-hint="0 = sin embestida" data-color="#22c55e"></div>
+        <p class="nota">La embestida usa la velocidad de ataque y el freno al encontrarlo de la pestaña Seguimiento.</p>
+      </section>
+    </div>
+  </div>
+
+  <!-- ===================== Vista Manejo manual ===================== -->
+  <div class="manejo-grid" id="vistaManejo" hidden>
+    <section class="card">
+      <h2>MANEJO MANUAL <small>joystick, flechas o W A S D</small></h2>
+      <button class="armar" id="btnArmar">HABILITAR MANEJO</button>
+      <div class="joy-wrap"><canvas id="joy" aria-label="Joystick"></canvas></div>
+      <div class="dpad" id="dpad">
+        <span></span><button data-d="0,1" aria-label="Adelante">▲</button><span></span>
+        <button data-d="-1,0" aria-label="Girar a la izquierda">⟲</button><button class="alto" id="btnAlto">ALTO</button><button data-d="1,0" aria-label="Girar a la derecha">⟳</button>
+        <span></span><button data-d="0,-1" aria-label="Atrás">▼</button><span></span>
+      </div>
+      <p class="nota">El robot solo se mueve mientras mantienes el joystick o una flecha. Si se pierde el BLE o sueltas el control, se detiene.</p>
+    </section>
+    <div class="col">
+      <section class="card">
+        <h2>VELOCIDAD</h2>
+        <div class="param" style="--c:#f59e0b">
+          <div class="cab"><label for="vmaxMan">Velocidad máxima</label>
+            <div class="stepper"><button type="button" class="menos" id="vmaxMenos">−</button>
+              <input type="number" inputmode="numeric" id="vmaxMan" min="10" max="100" step="5" value="50">
+              <button type="button" class="mas" id="vmaxMas">+</button><span class="u">%</span></div></div>
+        </div>
+        <div class="param" style="--c:#a5b4fc;margin-top:14px">
+          <div class="cab"><label for="giroMan">Giro <small>% de la velocidad al girar</small></label>
+            <div class="stepper"><button type="button" class="menos" id="giroMenos">−</button>
+              <input type="number" inputmode="numeric" id="giroMan" min="10" max="100" step="5" value="70">
+              <button type="button" class="mas" id="giroMas">+</button><span class="u">%</span></div></div>
+        </div>
+      </section>
+      <section class="card">
+        <h2>MOTORES <small>velocidad aplicada (con rampa)</small></h2>
+        <div class="mbar"><span class="etq">M1 · izquierda</span><div class="pista"><div class="rel" id="mb1"></div></div><span class="val" id="mv1">0</span></div>
+        <div class="mbar"><span class="etq">M2 · derecha</span><div class="pista"><div class="rel" id="mb2"></div></div><span class="val" id="mv2">0</span></div>
+        <div class="alerta-piso"><div id="apI">PISO IZQ</div><div id="apD">PISO DER</div></div>
+      </section>
+    </div>
+  </div>
+
+  <!-- ===================== Vista Sensores (solo lectura) ===================== -->
+  <div class="sens-grid" id="vistaSensores" hidden>
+    <section class="card">
+      <h2>VISTA DEL ROBOT <small>presencia · piso · distancia</small><span class="der"><span class="pill robot" id="hzSens">0 Hz</span></span></h2>
+      <svg class="dohyo" id="svgDohyo" viewBox="0 0 300 310" aria-label="Robot en el dohyo">
+        <defs>
+          <radialGradient id="gDohyo"><stop offset="0" stop-color="#151b24"/><stop offset="1" stop-color="#0c1016"/></radialGradient>
+        </defs>
+        <circle cx="150" cy="160" r="146" fill="url(#gDohyo)"/>
+        <circle id="bordeDohyo" cx="150" cy="160" r="142" fill="none" stroke="#e5e7eb" stroke-opacity=".25" stroke-width="4"/>
+        <g id="conos"></g>
+        <line id="haz" x1="150" y1="112" x2="150" y2="112" stroke="#7dd3fc" stroke-width="4" stroke-linecap="round"/>
+        <rect id="objetivo" x="128" y="100" width="44" height="10" rx="3" fill="#ef4444" fill-opacity=".35" stroke="#ef4444" visibility="hidden"/>
+        <text id="txtDist" x="150" y="96" text-anchor="middle" font-size="12" font-weight="800" fill="#7dd3fc"></text>
+        <polygon points="106,122 194,122 186,112 114,112" fill="#c9d0da"/>
+        <rect x="102" y="122" width="96" height="96" rx="10" fill="#1e2632" stroke="#3c4a5e"/>
+        <rect x="90" y="160" width="14" height="44" rx="4" fill="#0b0f14" stroke="#334155"/>
+        <rect x="196" y="160" width="14" height="44" rx="4" fill="#0b0f14" stroke="#334155"/>
+        <g id="cuerposPres"></g>
+        <circle id="dPisoI" cx="122" cy="140" r="8" fill="#0b0f14" stroke="#38bdf8" stroke-width="2.5"/>
+        <circle id="dPisoD" cx="178" cy="140" r="8" fill="#0b0f14" stroke="#f472b6" stroke-width="2.5"/>
+        <text x="150" y="182" text-anchor="middle" fill="#cbd3de" fill-opacity=".3" font-size="9" font-weight="700" letter-spacing="2">SILVERGIN</text>
+        <text x="150" y="304" text-anchor="middle" fill="#8593a5" font-size="10" font-weight="700" letter-spacing="2">▼ ATRÁS</text>
+      </svg>
+    </section>
+
+    <div class="col">
+      <section class="card">
+        <h2>PRESENCIA <small>E3Z-D82</small></h2>
+        <div class="pres-grid" id="presGrid"></div>
+      </section>
+
+      <section class="card">
+        <h2>DISTANCIA <small>VL53L0X · frente</small></h2>
+        <div class="fila" style="justify-content:space-between">
+          <div class="big"><b id="distVal">—</b><span>mm</span></div>
+          <span class="chip" id="distChip" style="color:var(--dim)">SIN DATOS</span>
+        </div>
+        <div class="barra" style="margin-top:12px"><div class="relleno" id="distBar" style="background:var(--acc)"></div><div class="umbral" id="distUmb"></div></div>
+        <div class="tl-ms"><span>0</span><span>250</span><span>500</span><span>750</span><span>1000 mm</span></div>
+        <canvas class="spark" id="sparkDist"></canvas>
+        <div class="fila" style="margin-top:12px">
+          <span class="etq">Marcar OBJETIVO por debajo de</span>
+          <span class="num"><input type="number" id="umbralDist" min="30" max="1200" step="10" value="400"><span>mm</span></span>
+        </div>
+      </section>
+
+      <section class="card">
+        <h2>PISO <small>QRE1113 · umbrales del robot</small></h2>
+        <div class="piso-sens">
+          <div class="caja" id="cajaI"><span style="color:var(--izq);font-weight:800">IZQ</span><b id="sPisoI">—</b><span id="sEstI">—</span></div>
+          <div class="caja" id="cajaD"><span style="color:var(--der);font-weight:800">DER</span><b id="sPisoD">—</b><span id="sEstD">—</span></div>
+        </div>
+        <canvas class="spark" id="sparkPiso"></canvas>
+      </section>
+    </div>
+  </div>
+</div>
+
+<script>
+"use strict";
+
+// ================== Configuración ==================
+const NUS = "6e400001-b5a3-f393-e0a9-e50e24dcca9e";
+const NUS_RX = "6e400002-b5a3-f393-e0a9-e50e24dcca9e";   // app -> robot
+const NUS_TX = "6e400003-b5a3-f393-e0a9-e50e24dcca9e";   // robot -> app
+const ADC_MAX = 4095;
+
+// Debe coincidir con la tabla DEFS del firmware
+const PARAMS = {
+  v1: { def: 50,  min: 0, max: 100 },
+  v2: { def: 50,  min: 0, max: 100 },
+  vr: { def: 60,  min: 0, max: 100 },
+  tr: { def: 250, min: 0, max: 2000 },
+  vg: { def: 60,  min: 0, max: 100 },
+  tg: { def: 220, min: 0, max: 2000 },
+  tf: { def: 30,  min: 0, max: 500 },
+  ui: { def: 700, min: 0, max: 4095 },
+  ud: { def: 700, min: 0, max: 4095 },
+  cf: { def: 2,   min: 1, max: 20 },
+  gd: { def: 2,   min: 0, max: 2 },
+  ar: { def: 0,   min: 0, max: 1 },
+  ea: { def: 0,   min: 0, max: 5000 },
+  a1: { def: 0,   min: 0, max: 180 },
+  b1: { def: 90,  min: 0, max: 180 },
+  a2: { def: 0,   min: 0, max: 180 },
+  b2: { def: 90,  min: 0, max: 180 },
+  sd: { def: 1,   min: 0, max: 1 },
+  ra: { def: 80,  min: 0, max: 1000 },
+  // Seguimiento (deben coincidir con el firmware)
+  mo: { def: 1,   min: 0, max: 2 },
+  ns: { def: 0,   min: 0, max: 2 },
+  mk: { def: 63,  min: 0, max: 63 },
+  va: { def: 80,  min: 0, max: 100 },
+  gi: { def: 35,  min: 0, max: 100 },
+  ge: { def: 50,  min: 0, max: 100 },
+  gl: { def: 70,  min: 0, max: 100 },
+  fe: { def: 20,  min: 0, max: 200 },
+  cp: { def: 2,   min: 1, max: 10 },
+  me: { def: 200, min: 0, max: 2000 },
+  vb: { def: 40,  min: 0, max: 100 },
+  gb: { def: 360, min: 30, max: 1080 },
+  mv: { def: 600, min: 100, max: 5000 },
+  sb: { def: 1,   min: 0, max: 1 },
+  ta: { def: 300, min: 0, max: 3000 },
+  te: { def: 1,   min: 0, max: 1 },
+  da: { def: 300, min: 30, max: 1200 },
+  pm: { def: 0,   min: 0, max: 1 },
+  bd: { def: 2,   min: 0, max: 2 },
+  c1: { def: 100, min: 50, max: 100 },
+  c2: { def: 100, min: 50, max: 100 },
+  c3: { def: 100, min: 50, max: 100 },
+  c4: { def: 100, min: 50, max: 100 },
+  lp: { def: 0,   min: 0, max: 1 },
+  // Estrategias
+  es: { def: 1,   min: 1, max: 8 },
+  fc: { def: 30,  min: 0, max: 500 },
+  fd: { def: 80,  min: 0, max: 1200 },
+  fv: { def: 70,  min: 0, max: 100 },
+  ft: { def: 150, min: 20, max: 1000 },
+  fa: { def: 250, min: 0, max: 2000 },
+  fn: { def: 400, min: 0, max: 3000 },
+};
+const ESTRATEGIAS = [
+  { n: "Seguimiento" },
+  { n: "Flanco", t: "contra banderas" },
+  { n: "Por programar", pend: true }, { n: "Por programar", pend: true }, { n: "Por programar", pend: true },
+  { n: "Por programar", pend: true }, { n: "Por programar", pend: true }, { n: "Por programar", pend: true },
+];
+const ESTADOS = [
+  { n: "PARADO",  c: "#8593a5" },
+  { n: "ESPERA",  c: "#f59e0b" },
+  { n: "AVANCE",  c: "#22c55e" },
+  { n: "FRENO",   c: "#f59e0b" },
+  { n: "REVERSA", c: "#ef4444" },
+  { n: "GIRO",    c: "#7dd3fc" },
+  { n: "MANUAL",  c: "#a78bfa" },
+  { n: "ATAQUE",  c: "#ef4444" },
+  { n: "APUNTA",  c: "#7dd3fc" },
+  { n: "FIJA",    c: "#f59e0b" },
+  { n: "BUSCA",   c: "#a78bfa" },
+  { n: "AVANZA",  c: "#22c55e" },
+  { n: "VUELTA",  c: "#a5b4fc" },
+  { n: "PRUEBA",  c: "#22c55e" },
+  { n: "FLANCO",  c: "#f472b6" },
+  { n: "EMBISTE", c: "#ef4444" },
+  { n: "CALIBRA", c: "#a5b4fc" },
+];
+
+const $ = (s, r = document) => r.querySelector(s);
+const $$ = (s, r = document) => [...r.querySelectorAll(s)];
+
+let enlace = null;          // BLE o Demo
+const valores = {};         // parámetros actuales
+for (const k in PARAMS) valores[k] = PARAMS[k].def;
+const historial = [[], []]; // últimas lecturas de piso para calibrar
+const calib = [{}, {}];
+let ultimoEstado = 0;
+
+// ================== Consola ==================
+function log(txt, color) {
+  const el = $("#log");
+  const t = new Date().toLocaleTimeString();
+  const linea = document.createElement("div");
+  linea.innerHTML = `<span class="t">${t}</span>  `;
+  const s = document.createElement("span");
+  s.textContent = txt;
+  if (color) s.style.color = color;
+  linea.appendChild(s);
+  el.appendChild(linea);
+  while (el.childNodes.length > 300) el.removeChild(el.firstChild);
+  el.scrollTop = el.scrollHeight;
+}
+
+// ================== Controles de parámetros ==================
+function crearDeslizador(div) {
+  const k = div.dataset.param, p = PARAMS[k];
+  const unidad = div.dataset.unit || "";
+  const paso = Number(div.dataset.step || 1);
+  const hint = div.dataset.hint ? ` <small>${div.dataset.hint}</small>` : "";   // el espacio deja que se parta en el celular
+  div.innerHTML = `
+    <div class="cab"><label for="n_${k}">${div.dataset.label}${hint}</label>
+      <div class="stepper">
+        <button type="button" class="menos" aria-label="Menos">−</button>
+        <input type="number" inputmode="numeric" id="n_${k}" min="${p.min}" max="${p.max}" step="${paso}">
+        <button type="button" class="mas" aria-label="Más">+</button>
+        <span class="u">${unidad}</span>
+      </div></div>`;
+  if (div.dataset.color) div.style.setProperty("--c", div.dataset.color);
+  const n = $("#n_" + k, div);
+  const ajustar = mult => dir => cambiarLocal(k, valores[k] + dir * paso * mult, true);
+  repetir($(".menos", div), m => ajustar(m)(-1));
+  repetir($(".mas", div), m => ajustar(m)(+1));
+  n.addEventListener("change", () => cambiarLocal(k, Number(n.value), true));
+  n.addEventListener("keydown", e => { if (e.key === "Enter") n.blur(); });
+  n.addEventListener("focus", () => n.select());
+}
+
+// Botón que repite mientras se mantiene presionado (acelera después de un rato)
+function repetir(btn, fn) {
+  let espera, intervalo, veces = 0;
+  const parar = () => { clearTimeout(espera); clearInterval(intervalo); };
+  btn.addEventListener("pointerdown", e => {
+    e.preventDefault();
+    btn.setPointerCapture?.(e.pointerId);
+    veces = 0;
+    fn(1);
+    espera = setTimeout(() => {
+      intervalo = setInterval(() => { veces++; fn(veces > 20 ? 10 : veces > 8 ? 5 : 1); }, 80);
+    }, 400);
+  });
+  ["pointerup", "pointercancel", "lostpointercapture"].forEach(ev => btn.addEventListener(ev, parar));
+  btn.addEventListener("click", e => { if (e.detail === 0) fn(1); });   // teclado
+  btn.addEventListener("contextmenu", e => e.preventDefault());
+}
+
+function pintarParam(k) {
+  const v = valores[k], p = PARAMS[k];
+  const r = $("#r_" + k), n = $("#n_" + k);
+  if (r && document.activeElement !== r) r.value = v;
+  if (r) r.style.setProperty("--p", ((v - p.min) / (p.max - p.min) * 100) + "%");
+  if (n && document.activeElement !== n) n.value = v;
+  if (n) {
+    const cont = n.parentElement;
+    $(".menos", cont).disabled = v <= p.min;
+    $(".mas", cont).disabled = v >= p.max;
+  }
+  const seg = $(`.seg[data-param="${k}"]`);
+  if (seg) $$("button", seg).forEach(b => b.classList.toggle("sel", Number(b.dataset.v) === v));
+  if (k === "ui" || k === "ud") pintarUmbral();
+  if (["tf", "tr", "tg"].includes(k)) pintarLineaTiempo();
+  if (k === "ar") {
+    $("#modoTxt").textContent = v === 1 ? "arranque con el módulo ING Maker (GO)" : "arranque desde la app o BTN1";
+    $("#btnGo").disabled = v === 1;
+    if ($("#btnGo2")) $("#btnGo2").disabled = v === 1;
+    if ($("#btnGo3")) $("#btnGo3").disabled = v === 1;
+  }
+  if (k === "es" && typeof pintarEstrategias === "function") pintarEstrategias();
+  if (["ns", "mk"].includes(k) && typeof construirVistaSeg === "function" && $("#svgSeg")) {
+    if (k === "ns") { construirVistaSeg(); crearVistaSensores(); }
+    else pintarSeg();
+  }
+  if (k === "ns" && $("label[for=n_gi]")) {
+    $("label[for=n_gi]").textContent = v === 2 ? "Giro hacia los del frente (S2 / S4)" : "Giro hacia S2 / S5";
+    $("label[for=n_gl]").textContent = v === 2 ? "Giro hacia los lados (S1 / S5, 90°)" : "Giro hacia los lados (90°)";
+  }
+  if (k === "pm" && $("#avisoPm")) $("#avisoPm").style.display = v === 1 ? "block" : "none";
+  if (k === "mo" && $("#segModoTxt")) $("#segModoTxt").textContent =
+    ["solo borde: avance recto", "seguimiento + control de borde", "solo seguimiento, sin borde"][v];
+  actualizarVisibilidad();
+}
+
+// data-mostrar="k=v", "k=v1,v2,v3" (cualquiera) o varias condiciones con "&"
+function actualizarVisibilidad() {
+  $$("[data-mostrar]").forEach(el => {
+    el.hidden = !el.dataset.mostrar.split("&").every(cond => {
+      const [k, lista] = cond.split("=");
+      return lista.split(",").map(Number).includes(valores[k]);
+    });
+  });
+}
+
+const temporizadores = {};
+function cambiarLocal(k, v, enviarAlRobot) {
+  const p = PARAMS[k];
+  v = Math.round(Math.min(p.max, Math.max(p.min, Number.isFinite(v) ? v : p.def)));
+  valores[k] = v;
+  pintarParam(k);
+  if (enviarAlRobot) {
+    clearTimeout(temporizadores[k]);
+    temporizadores[k] = setTimeout(() => enviar(`P,${k},${v}`), 90);
+  }
+  // Motores enlazados
+  if ($("#swEnlace").classList.contains("on") && (k === "v1" || k === "v2") && enviarAlRobot) {
+    const otro = k === "v1" ? "v2" : "v1";
+    if (valores[otro] !== v) cambiarLocal(otro, v, true);
+  }
+}
+
+function pintarUmbral() {
+  $("#umbI").style.left = `calc(${valores.ui / ADC_MAX * 100}% - 1px)`;
+  $("#umbD").style.left = `calc(${valores.ud / ADC_MAX * 100}% - 1px)`;
+}
+
+function pintarLineaTiempo() {
+  const f = valores.tf, r = valores.tr, g = valores.tg;
+  const total = f + r + g || 1;
+  $("#tlF").style.flexGrow = Math.max(f, 0.001);
+  $("#tlR").style.flexGrow = Math.max(r, 0.001);
+  $("#tlG").style.flexGrow = Math.max(g, 0.001);
+  $("#tlF").textContent = f / total > 0.12 ? "FRENO" : "";
+  $("#tlR").textContent = r / total > 0.14 ? "REVERSA" : "";
+  $("#tlG").textContent = g / total > 0.1 ? "GIRO" : "";
+  $("#tlTotal").textContent = `${f + r + g} ms`;
+}
+
+// ================== Telemetría ==================
+// ¿Está sobre la línea de la orilla? Depende de si la orilla es blanca (lp=0) o negra (lp=1)
+function enLinea(v, umbral) { return valores.lp === 1 ? v > umbral : v < umbral; }
+function pintarServo(i, ang) {
+  const s = "S" + (i + 1);
+  if (ang === undefined || ang < 0 || !Number.isFinite(ang)) { $("#ang" + s).textContent = "—"; return; }
+  $("#ang" + s).textContent = ang + "°";
+  $("#ag" + s).style.transform = `rotate(${ang - 90}deg)`;
+}
+
+function telemetria(est, izq, der, m1, m2, ret, s1, s2) {
+  pintarServo(0, s1);
+  pintarServo(1, s2);
+  ultimoEstado = est;
+  const e = ESTADOS[est] || ESTADOS[0];
+  const chip = $("#chipEstado");
+  chip.textContent = e.n;
+  chip.style.color = e.c;
+  chip.style.borderColor = e.c;
+  chip.style.background = e.c + "22";
+  ["#chipEstado2", "#chipEstado3"].forEach(id => {
+    const c = $(id);
+    if (c) { c.textContent = e.n; c.style.color = e.c; c.style.borderColor = e.c; c.style.background = e.c + "22"; }
+  });
+  $("#retornos").textContent = ret;
+  $("#tlF").classList.toggle("activa", est === 3);
+  $("#tlR").classList.toggle("activa", est === 4);
+  $("#tlG").classList.toggle("activa", est === 5);
+
+  const sensores = [
+    [izq, valores.ui, "I", "#38bdf8"],
+    [der, valores.ud, "D", "#f472b6"],
+  ];
+  sensores.forEach(([v, u, s], i) => {
+    const blanco = v < u;
+    $("#bar" + s).style.width = (v / ADC_MAX * 100) + "%";
+    $("#val" + s).textContent = v;
+    const b = $("#bdg" + s);
+    b.textContent = blanco ? "BLANCO" : "NEGRO";
+    b.className = "badge " + (blanco ? "blanco" : "negro") + (enLinea(v, u) ? " linea" : "");
+    $("#piso" + s).setAttribute("fill", blanco ? "#f8fafc" : "#0b0f14");
+    historial[i].push(v);
+    if (historial[i].length > 10) historial[i].shift();
+  });
+
+  [[m1, "I"], [m2, "D"]].forEach(([m, s]) => {
+    const alto = Math.abs(m) / 100 * 21;
+    const r = $("#vel" + s);
+    r.setAttribute("height", alto);
+    r.setAttribute("y", m >= 0 ? 86 - alto : 86);
+    r.setAttribute("fill", m >= 0 ? "#22c55e" : "#f59e0b");
+    $("#txt" + s).textContent = (m > 0 ? "+" : "") + m;
+  });
+}
+
+// ================== Vista Sensores ==================
+// Posición en el cuerpo (-1..1, y negativo = frente) y ángulo (0 = frente) según el modo
+const PINES_PRES = [4, 5, 6, 7, 15, 16];
+function geometria() {
+  if (valores.ns === 1) {     // 4: S3/S4 al centro, S2 izquierda y S5 derecha a 90°
+    return [
+      { x: -0.9, y: -1.00, a: 0, usado: false },
+      { x: -1.00, y: 0.00, a: -90, usado: true },
+      { x: -0.18, y: -1.00, a: 0, usado: true },
+      { x:  0.18, y: -1.00, a: 0, usado: true },
+      { x:  1.00, y: 0.00, a: 90, usado: true },
+      { x:  0.9, y: -1.00, a: 0, usado: false },
+    ].map((g, i) => ({ ...g, pin: PINES_PRES[i], nombre: "S" + (i + 1) }));
+  }
+  if (valores.ns === 2) {     // 5: 3 al frente + lados a 90°, con los nombres del código de 5 sensores
+    return [
+      { x: -1.00, y: 0.00, a: -90, usado: true, nombre: "S5" },   // IO4  lado izquierdo
+      { x: -0.9, y: -1.00, a: 0, usado: false, nombre: "—" },     // IO5  libre
+      { x: -0.45, y: -1.00, a: 0, usado: true, nombre: "S4" },    // IO6  frente izquierdo
+      { x:  0.00, y: -1.00, a: 0, usado: true, nombre: "S3" },    // IO7  centro
+      { x:  0.45, y: -1.00, a: 0, usado: true, nombre: "S2" },    // IO15 frente derecho
+      { x:  1.00, y: 0.00, a: 90, usado: true, nombre: "S1" },    // IO16 lado derecho
+    ].map((g, i) => ({ ...g, pin: PINES_PRES[i] }));
+  }
+  return [-0.9, -0.54, -0.18, 0.18, 0.54, 0.9].map((x, i) => ({ x, y: -1, a: 0, usado: true, pin: PINES_PRES[i], nombre: "S" + (i + 1) }));
+}
+const DIST_MAX = 1000, TOF_FUERA = 8190;
+const SVGNS = "http://www.w3.org/2000/svg";
+const histDist = [], histPiso = [[], []];
+let tramasS = 0, tHzS = performance.now();
+
+function crearVistaSensores() {
+  const cx = 150, cy = 170, half = 48, rD = 140, dcx = 150, dcy = 160;
+  const conos = $("#conos"), cuerpos = $("#cuerposPres"), grid = $("#presGrid");
+  conos.innerHTML = ""; cuerpos.innerHTML = ""; grid.innerHTML = "";
+  geometria().forEach((s, i) => {
+    const ox = cx + s.x * half, oy = cy + s.y * half, a = s.a * Math.PI / 180;
+    const ux = Math.sin(a), uy = -Math.cos(a);
+    // largo hasta el borde del dohyo
+    const px = ox - dcx, py = oy - dcy, b = px * ux + py * uy, c = px * px + py * py - rD * rD;
+    const L = -b + Math.sqrt(Math.max(0, b * b - c));
+    const ap = (s.a === 0 ? 3 : 8) * Math.PI / 180;
+    const p1 = [ox + L * Math.sin(a - ap), oy - L * Math.cos(a - ap)];
+    const p2 = [ox + L * Math.sin(a + ap), oy - L * Math.cos(a + ap)];
+    const pol = document.createElementNS(SVGNS, "polygon");
+    pol.setAttribute("points", `${ox},${oy} ${p1} ${p2}`);
+    pol.setAttribute("class", "cono");
+    pol.setAttribute("fill", "#8593a5");
+    pol.setAttribute("opacity", ".12");
+    pol.id = "cono" + i;
+    conos.appendChild(pol);
+    const et = document.createElementNS(SVGNS, "text");
+    const k = s.a === 0 ? 0.86 : 0.68;   // las etiquetas frontales más lejos, para no tapar el haz
+    et.setAttribute("x", ox + L * k * ux + (s.a === 0 ? (s.x === 0 ? 13 : Math.sign(s.x) * 10) : 0));   // el del centro, a un lado del haz del VL53L0X
+    et.setAttribute("y", oy + L * k * uy + 4);
+    et.setAttribute("text-anchor", "middle");
+    et.setAttribute("font-size", "11");
+    et.setAttribute("font-weight", "800");
+    et.setAttribute("fill", "#4b5869");
+    et.id = "etq" + i;
+    et.textContent = s.nombre;
+    conos.appendChild(et);
+    const r = document.createElementNS(SVGNS, "rect");
+    r.setAttribute("x", -7); r.setAttribute("y", -5); r.setAttribute("width", 14); r.setAttribute("height", 10); r.setAttribute("rx", 2);
+    r.setAttribute("fill", "#3a4556");
+    r.setAttribute("transform", `translate(${ox} ${oy}) rotate(${s.a})`);
+    r.id = "cpres" + i;
+    cuerpos.appendChild(r);
+    const tile = document.createElement("div");
+    tile.className = "pres";
+    tile.id = "tile" + i;
+    tile.innerHTML = `<b>${s.nombre}</b><span>IO${s.pin}</span><span class="est">${s.usado ? "—" : "NO SE USA"}</span>`;
+    if (!s.usado) { tile.style.opacity = ".4"; pol.style.display = "none"; et.style.display = "none"; r.style.display = "none"; }
+    tile.dataset.usado = s.usado ? "1" : "0";
+    grid.appendChild(tile);
+  });
+}
+
+function presencia(vals, dist) {
+  vals.forEach((v, i) => {
+    const on = v === 1;
+    const c = $("#cono" + i);
+    c.setAttribute("fill", on ? "#ef4444" : "#8593a5");
+    c.setAttribute("opacity", on ? ".55" : ".12");
+    $("#etq" + i).setAttribute("fill", on ? "#fff" : "#4b5869");
+    $("#cpres" + i).setAttribute("fill", on ? "#ef4444" : "#3a4556");
+    const t = $("#tile" + i);
+    if (t.dataset.usado === "0") return;
+    t.classList.toggle("on", on);
+    $(".est", t).textContent = on ? "DETECTA" : "—";
+  });
+  distancia(dist);
+  tramasS++;
+}
+
+function distancia(d) {
+  const umbral = Number($("#umbralDist").value) || 400;
+  const chip = $("#distChip"), haz = $("#haz"), obj = $("#objetivo"), txt = $("#txtDist");
+  let color = "#7dd3fc";
+  const y0 = 112, largo = 112 - 26;   // del frente al borde del dohyo
+  if (d === undefined || Number.isNaN(d)) {
+    chip.textContent = "SIN DATOS"; color = "#4b5869";
+  } else if (d < 0) {
+    chip.textContent = "NO DETECTADO"; color = "#ef4444";
+  } else if (d >= TOF_FUERA) {
+    chip.textContent = "FUERA DE RANGO"; color = "#8593a5";
+  } else if (d < umbral) {
+    chip.textContent = "OBJETIVO"; color = "#ef4444";
+  } else {
+    chip.textContent = "LIBRE"; color = "#7dd3fc";
+  }
+  chip.style.color = color;
+  const valido = d >= 0 && d < TOF_FUERA;
+  $("#distVal").textContent = valido ? d : "—";
+  $("#distBar").style.width = valido ? Math.min(100, d / DIST_MAX * 100) + "%" : "0%";
+  $("#distBar").style.background = color;
+  $("#distUmb").style.left = `calc(${Math.min(100, umbral / DIST_MAX * 100)}% - 1px)`;
+  if (valido) {
+    const y = y0 - largo * Math.min(d, DIST_MAX) / DIST_MAX;
+    haz.setAttribute("y2", y); haz.setAttribute("stroke", color); haz.removeAttribute("stroke-dasharray"); haz.setAttribute("stroke-opacity", "1");
+    obj.setAttribute("y", y - 10); obj.setAttribute("visibility", "visible");
+    obj.setAttribute("stroke", color); obj.setAttribute("fill", color);
+    txt.textContent = "";
+  } else if (d >= TOF_FUERA) {
+    haz.setAttribute("y2", y0 - largo); haz.setAttribute("stroke", "#7dd3fc"); haz.setAttribute("stroke-dasharray", "4 5"); haz.setAttribute("stroke-opacity", ".35");
+    obj.setAttribute("visibility", "hidden"); txt.textContent = "";
+  } else {
+    haz.setAttribute("y2", y0); obj.setAttribute("visibility", "hidden");
+  }
+  histDist.push(valido ? d : null);
+  if (histDist.length > 150) histDist.shift();
+  if (!$("#vistaSensores").hidden) dibujarSpark($("#sparkDist"), [histDist], ["#7dd3fc"], DIST_MAX, [umbral], ["#f59e0b"]);
+}
+
+function pisoSensores(izq, der) {
+  [[izq, valores.ui, "I"], [der, valores.ud, "D"]].forEach(([v, u, s], i) => {
+    const blanco = v < u;
+    $("#sPiso" + s).textContent = v;
+    $("#sEst" + s).textContent = (blanco ? "BLANCO" : "NEGRO") + (enLinea(v, u) ? " · ORILLA" : "");
+    $("#caja" + s).classList.toggle("blanco", blanco);
+    $("#caja" + s).classList.toggle("linea", enLinea(v, u));
+    $("#dPiso" + s).setAttribute("fill", blanco ? "#f8fafc" : "#0b0f14");
+    histPiso[i].push(v);
+    if (histPiso[i].length > 150) histPiso[i].shift();
+  });
+  $("#bordeDohyo").setAttribute("stroke-opacity", enLinea(izq, valores.ui) || enLinea(der, valores.ud) ? "1" : ".25");
+  $("#bordeDohyo").setAttribute("stroke", valores.lp === 1 ? "#475569" : "#e5e7eb");
+  if (!$("#vistaSensores").hidden) dibujarSpark($("#sparkPiso"), histPiso, ["#38bdf8", "#f472b6"], ADC_MAX, [valores.ui, valores.ud], ["#38bdf8", "#f472b6"]);
+}
+
+function dibujarSpark(cv, series, colores, max, umbrales, colUmb) {
+  const dpr = window.devicePixelRatio || 1;
+  const w = cv.clientWidth, h = cv.clientHeight;
+  if (!w) return;
+  if (cv.width !== Math.round(w * dpr)) { cv.width = Math.round(w * dpr); cv.height = Math.round(h * dpr); }
+  const g = cv.getContext("2d");
+  g.setTransform(dpr, 0, 0, dpr, 0, 0);
+  g.clearRect(0, 0, w, h);
+  const y = v => h - 4 - (h - 8) * Math.min(Math.max(v, 0), max) / max;
+  umbrales.forEach((u, i) => {
+    g.strokeStyle = colUmb[i]; g.globalAlpha = .6; g.setLineDash([4, 4]); g.lineWidth = 1;
+    g.beginPath(); g.moveTo(0, y(u)); g.lineTo(w, y(u)); g.stroke();
+  });
+  g.setLineDash([]); g.globalAlpha = 1; g.lineWidth = 2;
+  series.forEach((s, k) => {
+    g.strokeStyle = colores[k];
+    g.beginPath();
+    let abierto = false;
+    const dx = w / 149, x0 = w - (s.length - 1) * dx;
+    s.forEach((v, i) => {
+      if (v === null) { abierto = false; return; }
+      const X = x0 + i * dx, Y = y(v);
+      if (abierto) g.lineTo(X, Y); else { g.moveTo(X, Y); abierto = true; }
+    });
+    g.stroke();
+  });
+}
+
+setInterval(() => {
+  const ahora = performance.now();
+  $("#hzSens").textContent = Math.round(tramasS * 1000 / (ahora - tHzS)) + " Hz";
+  tramasS = 0; tHzS = ahora;
+}, 1000);
+
+function cambiarPestana(tab) {
+  $$(".tabs button").forEach(b => b.classList.toggle("sel", b.dataset.tab === tab));
+  $("#vistaControl").hidden = tab !== "control";
+  $("#vistaSeguimiento").hidden = tab !== "seguimiento";
+  if (tab === "seguimiento") pintarSeg();
+  $("#vistaEstrategia").hidden = tab !== "estrategia";
+  $("#vistaManejo").hidden = tab !== "manejo";
+  $("#vistaSensores").hidden = tab !== "sensores";
+  if (tab !== "manejo") desarmar();
+  else requestAnimationFrame(dibujarJoy);
+  try { localStorage.setItem("pestana", tab); } catch (e) {}
+}
+
+// ================== Estrategias ==================
+function construirEstrategias() {
+  const lista = $("#listaEst");
+  lista.innerHTML = "";
+  ESTRATEGIAS.forEach((e, i) => {
+    const n = i + 1;
+    const b = document.createElement("button");
+    b.type = "button";
+    b.className = "est" + (e.pend ? " pend" : "");
+    b.dataset.v = n;
+    // Cómo se ve en los LEDs del robot: LED1 = bit 0, LED2 = bit 1, LED3 = bit 2; la 8 parpadea
+    const leds = [0, 1, 2].map(bit => `<i class="${n < 8 && (n >> bit) & 1 ? "on" : ""}"></i>`).join("");
+    b.innerHTML = `<b>${n}</b><span>${e.n}</span><span class="leds${n === 8 ? " blink" : ""}" aria-hidden="true">${leds}</span>`;
+    b.setAttribute("aria-label", `Estrategia ${n}: ${e.n}`);
+    b.addEventListener("click", () => cambiarLocal("es", n, true));
+    lista.appendChild(b);
+  });
+  pintarEstrategias();
+}
+
+function pintarEstrategias() {
+  const n = valores.es, e = ESTRATEGIAS[n - 1];
+  $$("#listaEst .est").forEach(b => {
+    b.classList.toggle("sel", Number(b.dataset.v) === n);
+    b.setAttribute("aria-pressed", Number(b.dataset.v) === n);
+  });
+  $("#estNum").textContent = n;
+  $("#estTitulo").innerHTML = `ESTRATEGIA ${n} · ${e.n.toUpperCase()}` + (e.t ? ` <small>${e.t}</small>` : "");
+}
+
+// ================== Seguimiento ==================
+const segDatos ={ raw: [0, 0, 0, 0, 0, 0], conf: 0, obj: -1, dist: undefined };
+const SEG = { cx: 150, cy: 176, half: 62 };   // geometría del dibujo de la pestaña Seguimiento
+const DECISION = [
+  { i: "·", t: "BUSCANDO", c: "#a78bfa" },
+  { i: "▲", t: "ATACAR", c: "#ef4444" },
+  { i: "⟲", t: "GIRAR A LA IZQUIERDA", c: "#7dd3fc" },
+  { i: "⟳", t: "GIRAR A LA DERECHA", c: "#7dd3fc" },
+];
+
+function construirVistaSeg() {
+  const svg = $("#svgSeg");
+  svg.innerHTML = "";
+  const el = (tag, at, padre = svg) => {
+    const e = document.createElementNS(SVGNS, tag);
+    for (const k in at) e.setAttribute(k, at[k]);
+    padre.appendChild(e);
+    return e;
+  };
+  const { cx, cy, half } = SEG;
+  // haz del VL53L0X y distancia de ataque
+  el("line", { id: "segTof", x1: cx, y1: cy - half - 8, x2: cx, y2: 12, stroke: "#7dd3fc", "stroke-width": 2, "stroke-dasharray": "3 5", opacity: ".5" });
+  el("line", { id: "segDa", x1: cx - 18, x2: cx + 18, y1: 0, y2: 0, stroke: "#f59e0b", "stroke-width": 2 });
+  // cuerpo
+  el("polygon", { points: `${cx - half + 4},${cy - half} ${cx + half - 4},${cy - half} ${cx + half - 12},${cy - half - 9} ${cx - half + 12},${cy - half - 9}`, fill: "#c9d0da" });
+  el("rect", { x: cx - half, y: cy - half, width: half * 2, height: half * 2, rx: 10, fill: "#1e2632", stroke: "#3c4a5e" });
+  el("text", { id: "segIcono", x: cx, y: cy + 10, "text-anchor": "middle", "font-size": 30, "font-weight": 800, fill: "#8593a5" }).textContent = "·";
+  geometria().forEach((g, i) => {
+    if (!g.usado) return;
+    const ox = cx + g.x * half, oy = cy + g.y * half;
+    const grupo = el("g", { class: "sensor", id: "segS" + i, role: "button", "aria-label": "Sensor " + g.nombre + " (IO" + g.pin + ")" });
+    let haz;
+    if (g.a === 0) {
+      haz = el("rect", { x: ox - 5, y: 14, width: 10, height: oy - 14, rx: 3 }, grupo);
+    } else {
+      const xFin = g.a < 0 ? 8 : 292;
+      haz = el("rect", { x: Math.min(ox, xFin), y: oy - 5, width: Math.abs(ox - xFin), height: 10, rx: 3 }, grupo);
+    }
+    haz.setAttribute("class", "haz");
+    el("rect", { class: "cuerpo", x: ox - 7, y: oy - 6, width: 14, height: 12, rx: 2, transform: g.a ? `rotate(${g.a} ${ox} ${oy})` : "" }, grupo);
+    const tx = g.a === 0 ? ox : (g.a < 0 ? 24 : 276), ty = g.a === 0 ? 10 : oy - 10;
+    el("text", { class: "etq", x: tx, y: ty, "text-anchor": "middle", "font-size": 11, "font-weight": 800 }, grupo).textContent = g.nombre;
+    // área amplia para tocar
+    el("rect", { x: g.a === 0 ? ox - 12 : Math.min(ox, g.a < 0 ? 8 : 292), y: g.a === 0 ? 0 : oy - 18, width: g.a === 0 ? 24 : Math.abs(ox - (g.a < 0 ? 8 : 292)), height: g.a === 0 ? oy + 8 : 36, fill: "transparent" }, grupo);
+    grupo.addEventListener("click", () => cambiarLocal("mk", valores.mk ^ (1 << i), true));
+  });
+  pintarSeg();
+}
+
+function pintarSeg() {
+  const svg = $("#svgSeg");
+  if (!svg || !svg.childNodes.length) return;
+  geometria().forEach((g, i) => {
+    const grupo = $("#segS" + i);
+    if (!grupo) return;
+    const habil = (valores.mk >> i) & 1, raw = segDatos.raw[i] === 1, conf = (segDatos.conf >> i) & 1;
+    const haz = $(".haz", grupo), cuerpo = $(".cuerpo", grupo), etq = $(".etq", grupo);
+    if (!habil) {
+      haz.setAttribute("fill", "#1a2029"); haz.setAttribute("stroke", "#4b5869"); haz.setAttribute("stroke-dasharray", "3 3");
+      cuerpo.setAttribute("fill", "#1a2029"); etq.setAttribute("fill", "#4b5869"); etq.setAttribute("text-decoration", "line-through");
+    } else {
+      haz.removeAttribute("stroke"); haz.removeAttribute("stroke-dasharray"); etq.removeAttribute("text-decoration");
+      haz.setAttribute("fill", conf ? "#ef4444cc" : raw ? "#ef444455" : "#8593a522");
+      cuerpo.setAttribute("fill", conf ? "#ef4444" : raw ? "#b45353" : "#3a4556");
+      etq.setAttribute("fill", conf || raw ? "#fff" : "#8593a5");
+    }
+  });
+  // VL53L0X
+  const { cy, half } = SEG, y0 = cy - half - 8, largo = y0 - 12;
+  const usar = valores.te === 1, d = segDatos.dist;
+  const tof = $("#segTof"), da = $("#segDa");
+  const yDa = y0 - largo * Math.min(valores.da, 1200) / 1200;
+  da.setAttribute("y1", yDa); da.setAttribute("y2", yDa);
+  da.setAttribute("visibility", usar ? "visible" : "hidden");
+  const dentro = usar && d >= 0 && d < valores.da;
+  tof.setAttribute("opacity", usar ? (dentro ? "1" : ".5") : ".12");
+  tof.setAttribute("stroke", dentro ? "#ef4444" : "#7dd3fc");
+  tof.setAttribute("stroke-dasharray", dentro ? "" : "3 5");
+  if (d >= 0 && d < 8190) tof.setAttribute("y2", Math.max(12, y0 - largo * Math.min(d, 1200) / 1200));
+  else tof.setAttribute("y2", 12);
+  const ahora = $("#tofAhora");
+  if (ahora) ahora.textContent = d === undefined ? "—" : d < 0 ? "sin sensor" : d >= 8190 ? "fuera de rango" : `${d} mm · ${dentro ? "DENTRO" : "fuera"}`;
+  // decisión
+  const dec = DECISION[segDatos.obj];
+  [["#decisionIcono", "#decisionTxt"], ["#decisionIcono2", "#decisionTxt2"]].forEach(([a, b]) => {
+    $(a).textContent = dec ? dec.i : "—";
+    $(a).style.color = dec ? dec.c : "#4b5869";
+    $(b).textContent = dec ? (b === "#decisionTxt" ? dec.t.toLowerCase() : dec.t) : (b === "#decisionTxt" ? "sin datos" : "SIN DATOS");
+  });
+  const ic = $("#segIcono");
+  ic.textContent = dec ? dec.i : "·";
+  ic.setAttribute("fill", dec ? dec.c : "#8593a5");
+}
+
+function datosSeguimiento(raw, dist, conf, obj) {
+  segDatos.raw = raw; segDatos.dist = dist;
+  segDatos.conf = Number.isFinite(conf) ? conf : 0;
+  segDatos.obj = Number.isFinite(obj) ? obj : -1;
+  if (!$("#vistaSeguimiento").hidden) pintarSeg();
+}
+
+// ================== Manejo manual ==================
+let armado = false;
+const joy = { x: 0, y: 0, activo: false };
+let dpad = null;                 // [x, y] mientras se mantiene una flecha
+const teclas = new Set();
+
+function armar(on) {
+  if (on && !enlace) { log("Conecta el robot primero", "#f59e0b"); return; }
+  armado = on;
+  const b = $("#btnArmar");
+  b.classList.toggle("on", on);
+  b.textContent = on ? "⚠ MANEJO HABILITADO" : "HABILITAR MANEJO";
+  $$("#dpad button").forEach(x => x.disabled = !on && x.id !== "btnAlto");
+  if (!on) { joy.x = joy.y = 0; dpad = null; teclas.clear(); }
+  dibujarJoy();
+}
+function desarmar() {
+  if (armado) { armar(false); enviar("X"); }
+}
+
+function comando() {
+  let x = 0, y = 0;
+  if (joy.activo) { x = joy.x; y = joy.y; }
+  else if (dpad) { [x, y] = dpad; }
+  else if (teclas.size) {
+    y = (teclas.has("w") ? 1 : 0) - (teclas.has("s") ? 1 : 0);
+    x = (teclas.has("d") ? 1 : 0) - (teclas.has("a") ? 1 : 0);
+  }
+  const vmax = Number($("#vmaxMan").value) || 50;
+  const giro = (Number($("#giroMan").value) || 70) / 100;
+  x *= giro;
+  let izq = y + x, der = y - x;
+  const m = Math.max(1, Math.abs(izq), Math.abs(der));
+  return [Math.round(izq / m * vmax), Math.round(der / m * vmax)];
+}
+
+setInterval(() => {
+  if (!armado || !enlace) return;
+  const [a, b] = comando();
+  enviar(`M,${a},${b}`);   // también funciona como señal de vida
+}, 100);
+
+function dibujarJoy() {
+  const cv = $("#joy");
+  if (!cv || $("#vistaManejo").hidden) return;
+  const dpr = window.devicePixelRatio || 1, w = cv.clientWidth;
+  if (!w) return;
+  if (cv.width !== Math.round(w * dpr)) { cv.width = cv.height = Math.round(w * dpr); }
+  const g = cv.getContext("2d");
+  g.setTransform(dpr, 0, 0, dpr, 0, 0);
+  g.clearRect(0, 0, w, w);
+  const c = w / 2, r = w / 2 - 26;
+  const grad = g.createRadialGradient(c, c, 0, c, c, r);
+  grad.addColorStop(0, "#18202b"); grad.addColorStop(1, "#0e131a");
+  g.fillStyle = grad; g.beginPath(); g.arc(c, c, r, 0, 7); g.fill();
+  g.strokeStyle = "#2b3747"; g.lineWidth = 1.5; g.stroke();
+  g.setLineDash([3, 5]); g.beginPath(); g.arc(c, c, r / 2, 0, 7);
+  g.moveTo(c - r, c); g.lineTo(c + r, c); g.moveTo(c, c - r); g.lineTo(c, c + r); g.stroke(); g.setLineDash([]);
+  g.fillStyle = "#4b5869"; g.font = "700 11px system-ui"; g.textAlign = "center";
+  g.fillText("ADELANTE", c, 14); g.fillText("ATRÁS", c, w - 6);
+  let kx = 0, ky = 0;
+  if (joy.activo) { kx = joy.x; ky = -joy.y; }
+  else if (dpad) { kx = dpad[0]; ky = -dpad[1]; }
+  const px = c + kx * r, py = c + ky * r;
+  const col = armado ? "#7dd3fc" : "#4b5869";
+  if (kx || ky) { g.strokeStyle = col; g.lineWidth = 3; g.beginPath(); g.moveTo(c, c); g.lineTo(px, py); g.stroke(); }
+  const gk = g.createRadialGradient(px - 6, py - 6, 2, px, py, 26);
+  gk.addColorStop(0, armado ? "#bae6fd" : "#64748b"); gk.addColorStop(1, armado ? "#0369a1" : "#1e293b");
+  g.fillStyle = gk; g.beginPath(); g.arc(px, py, 24, 0, 7); g.fill();
+  if (!armado) { g.fillStyle = "#8593a5"; g.font = "600 12px system-ui"; g.fillText("Habilita el manejo", c, c + 50); }
+}
+
+function iniciarManejo() {
+  const cv = $("#joy");
+  const desde = e => {
+    const rc = cv.getBoundingClientRect(), r = rc.width / 2 - 26;
+    let x = (e.clientX - rc.left - rc.width / 2) / r, y = -(e.clientY - rc.top - rc.height / 2) / r;
+    const l = Math.hypot(x, y); if (l > 1) { x /= l; y /= l; }
+    joy.x = x; joy.y = y; dibujarJoy();
+  };
+  cv.addEventListener("pointerdown", e => { if (!armado) return; cv.setPointerCapture(e.pointerId); joy.activo = true; desde(e); });
+  cv.addEventListener("pointermove", e => { if (joy.activo) desde(e); });
+  const soltar = () => { if (!joy.activo) return; joy.activo = false; joy.x = joy.y = 0; dibujarJoy(); if (armado) enviar("M,0,0"); };
+  ["pointerup", "pointercancel", "lostpointercapture"].forEach(ev => cv.addEventListener(ev, soltar));
+
+  $$("#dpad button[data-d]").forEach(b => {
+    const d = b.dataset.d.split(",").map(Number);
+    b.addEventListener("pointerdown", e => { if (!armado) return; e.preventDefault(); b.setPointerCapture?.(e.pointerId); dpad = d; b.classList.add("activo"); dibujarJoy(); });
+    const fin = () => { if (dpad === d) { dpad = null; if (armado) enviar("M,0,0"); } b.classList.remove("activo"); dibujarJoy(); };
+    ["pointerup", "pointercancel", "lostpointercapture"].forEach(ev => b.addEventListener(ev, fin));
+    b.addEventListener("contextmenu", e => e.preventDefault());
+  });
+  $("#btnAlto").addEventListener("click", () => { dpad = null; joy.activo = false; enviar("X"); armar(false); });
+  $("#btnArmar").addEventListener("click", () => armado ? desarmar() : armar(true));
+
+  const paso = (id, d) => {
+    const inp = $(id), v = Math.min(Number(inp.max), Math.max(Number(inp.min), (Number(inp.value) || 0) + d));
+    inp.value = v;
+    try { localStorage.setItem(id, v); } catch (e) {}
+  };
+  repetir($("#vmaxMenos"), m => paso("#vmaxMan", -5 * m));
+  repetir($("#vmaxMas"), m => paso("#vmaxMan", 5 * m));
+  repetir($("#giroMenos"), m => paso("#giroMan", -5 * m));
+  repetir($("#giroMas"), m => paso("#giroMan", 5 * m));
+  ["#vmaxMan", "#giroMan"].forEach(id => {
+    try { const v = localStorage.getItem(id); if (v) $(id).value = v; } catch (e) {}
+    $(id).addEventListener("change", () => paso(id, 0));
+  });
+
+  document.addEventListener("keydown", e => {
+    if ($("#vistaManejo").hidden || !armado || e.target.tagName === "INPUT") return;
+    const k = e.key.toLowerCase();
+    if ("wasd".includes(k) && k.length === 1) { teclas.add(k); e.preventDefault(); }
+  });
+  document.addEventListener("keyup", e => {
+    const k = e.key.toLowerCase();
+    if (teclas.delete(k) && !teclas.size && armado) enviar("M,0,0");
+  });
+  window.addEventListener("resize", dibujarJoy);
+  armar(false);
+}
+
+function barrasManejo(m1, m2, izq, der) {
+  [[m1, "1"], [m2, "2"]].forEach(([m, i]) => {
+    const r = $("#mb" + i), a = Math.min(Math.abs(m), 100) / 2;
+    r.style.left = m >= 0 ? "50%" : (50 - a) + "%";
+    r.style.width = a + "%";
+    r.style.background = m >= 0 ? "#22c55e" : "#f59e0b";
+    $("#mv" + i).textContent = (m > 0 ? "+" : "") + m;
+  });
+  const lI = enLinea(izq, valores.ui), lD = enLinea(der, valores.ud);
+  $("#apI").classList.toggle("blanco", lI);
+  $("#apD").classList.toggle("blanco", lD);
+  $("#apI").textContent = lI ? "IZQ EN LA ORILLA" : "PISO IZQ";
+  $("#apD").textContent = lD ? "DER EN LA ORILLA" : "PISO DER";
+}
+
+// ================== Mensajes del robot ==================
+let buffer = "";
+function recibir(texto) {
+  buffer += texto;
+  let i;
+  while ((i = buffer.indexOf("\n")) >= 0) {
+    const linea = buffer.slice(0, i).trim();
+    buffer = buffer.slice(i + 1);
+    if (linea) procesar(linea);
+  }
+  if (buffer.length > 400) buffer = "";
+}
+
+function procesar(linea) {
+  const p = linea.split(",");
+  if (p[0] === "T" && p.length >= 7) {
+    telemetria(...p.slice(1, 9).map(Number));
+    pisoSensores(Number(p[2]), Number(p[3]));
+    barrasManejo(Number(p[4]), Number(p[5]), Number(p[2]), Number(p[3]));
+  } else if (p[0] === "S" && p.length >= 8) {
+    presencia(p.slice(1, 7).map(Number), Number(p[7]));
+    datosSeguimiento(p.slice(1, 7).map(Number), Number(p[7]), Number(p[8]), Number(p[9]));
+  } else if (p[0] === "P" && p.length >= 3 && PARAMS[p[1]]) {
+    cambiarLocal(p[1], Number(p[2]), false);
+  } else if (p[0] === "I" && p.length >= 3) {
+    $("#pillRobot").textContent = `${p[1]} · ${p[2]}`;
+    log(`Robot: ${p[1]} (firmware ${p[2]})`, "#22c55e");
+  } else if (p[0] === "Z" && p.length >= 3) {
+    const causa = p[1], n = Number(p[2]) || 0;
+    const a = $("#avisoReinicio");
+    if (causa === "BROWNOUT") {
+      a.style.display = "block";
+      a.innerHTML = `El robot se reinició por <b>caída de voltaje (brownout)</b>` +
+        (n > 1 ? ` · ${n} veces desde que se encendió` : "") +
+        `. Sube la <b>rampa</b> o el <b>tiempo de freno</b>, revisa la carga de la batería y los capacitores de la alimentación.`;
+      log(`Último reinicio: BROWNOUT (${n} desde que se encendió)`, "#ef4444");
+    } else {
+      a.style.display = "none";
+      log(`Último reinicio: ${causa}`, causa === "ENCENDIDO" || causa === "PIN_RESET" ? "#8593a5" : "#f59e0b");
+    }
+  } else if (linea.startsWith("#")) {
+    log(linea.slice(1).trim(), "#7dd3fc");
+  }
+}
+
+// ================== Envío ==================
+function enviar(cmd) {
+  if (!enlace) return;
+  enlace.enviar(cmd + "\n");
+}
+
+// ================== BLE ==================
+class EnlaceBLE {
+  constructor() { this.cola = Promise.resolve(); this.cod = new TextEncoder(); this.dec = new TextDecoder(); }
+  async conectar() {
+    this.disp = await navigator.bluetooth.requestDevice({
+      filters: [{ namePrefix: "SILVERGIN" }, { services: [NUS] }],
+      optionalServices: [NUS],
+    });
+    this.disp.addEventListener("gattserverdisconnected", () => desconectado("Se perdió la conexión BLE"));
+    const gatt = await this.disp.gatt.connect();
+    const serv = await gatt.getPrimaryService(NUS);
+    this.rx = await serv.getCharacteristic(NUS_RX);
+    this.tx = await serv.getCharacteristic(NUS_TX);
+    await this.tx.startNotifications();
+    this.tx.addEventListener("characteristicvaluechanged", e => recibir(this.dec.decode(e.target.value)));
+    return this.disp.name;
+  }
+  enviar(texto) {
+    const datos = this.cod.encode(texto);
+    this.cola = this.cola.then(() =>
+      this.rx.writeValueWithoutResponse ? this.rx.writeValueWithoutResponse(datos) : this.rx.writeValue(datos)
+    ).catch(e => log("Error al enviar: " + e.message, "#ef4444"));
+  }
+  cerrar() { try { this.disp?.gatt?.disconnect(); } catch (e) {} }
+}
+
+// ================== Demo (robot simulado) ==================
+class EnlaceDemo {
+  constructor() {
+    this.P = { ...valores }; this.est = 0; this.t0 = 0; this.ret = 0; this.giro = 1; this.alt = true; this.m = [0, 0]; this.prox = 0; this.lado = 0;
+    // mundo simulado: rumbo del robot, ángulo y distancia del oponente
+    this.h = 0; this.opA = 70; this.od = 420; this.ult = 1; this.tVista = 0; this.lado8 = 1; this.velG = 0; this.dirB = 1; this.primero = true; this.tEmpuje = 0;
+    // estrategia 2 (flanco)
+    this.ladoC = 0; this.tC = 0; this.yaG = 0; this.ladoF = 1; this.msF = 0; this.huboF = false; this.tFinF = 0;
+  }
+  async conectar() {
+    setTimeout(() => { recibir("I,DRV8871,demo\nZ,BROWNOUT,2\n# Modo demo: robot simulado\n"); }, 50);
+    this.timer = setInterval(() => this.paso(), 100);
+    return "Demo";
+  }
+  enviar(texto) {
+    const l = texto.trim(), p = l.split(",");
+    const resp = s => setTimeout(() => recibir(s + "\n"), 15);
+    if (p[0] === "P" && this.P[p[1]] !== undefined) {
+      const d = PARAMS[p[1]];
+      this.P[p[1]] = Math.min(d.max, Math.max(d.min, Number(p[2])));
+      if (["a1", "b1", "a2", "b2"].includes(p[1])) this.vista = { i: p[1].endsWith("1") ? 0 : 1, v: this.P[p[1]], t: Date.now() };
+      resp(`P,${p[1]},${this.P[p[1]]}`);
+    } else if (p[0] === "G") {
+      Object.keys(this.P).forEach(k => resp(`P,${k},${this.P[k]}`));
+    } else if (p[0] === "R" && this.est === 0) {
+      if (this.P.ar === 1) return resp("# Modo modulo: el arranque lo da GO");
+      this.cambiar(1); this.prox = Date.now() + 1500; this.huboF = false; this.ladoC = 0; resp("# Inicio");
+    } else if (p[0] === "M" && (this.est === 0 || this.est === 6)) {
+      this.man = [Number(p[1]), Number(p[2])]; this.tMan = Date.now();
+      if (this.est === 0) this.cambiar(6);
+    } else if (p[0] === "X" && this.est !== 0) {
+      this.cambiar(0); resp("# Detenido");
+    } else if (p[0] === "A" && this.est === 0) {
+      this.pv = Number(p[1]); this.pms = Number(p[2]); this.cambiar(13);
+      resp(`# Prueba recta: ${this.pv} % durante ${this.pms} ms`);
+    } else if (p[0] === "V" && this.est === 0) {
+      this.cambiar(12); resp(`# Vuelta de calibracion: ${this.P.mv} ms a ${this.P.vb} %`);
+    } else if (p[0] === "F" && this.est === 0) {
+      this.ladoF = Number(p[1]) < 0 ? -1 : 1; this.cambiar(16);
+      resp(`# Giro de flanco: ${this.P.ft} ms a ${this.P.fv} % hacia la ${this.ladoF > 0 ? "derecha" : "izquierda"}`);
+    } else if (p[0] === "D") {
+      for (const k in PARAMS) this.P[k] = PARAMS[k].def;
+      Object.keys(this.P).forEach(k => resp(`P,${k},${this.P[k]}`));
+    } else if (p[0] === "W") resp("# Parametros guardados en flash");
+    else if (p[0] === "I") { resp("I,DRV8871,demo"); resp("Z,BROWNOUT,2"); }
+  }
+  cambiar(e) { this.est = e; this.t0 = Date.now(); }
+  sensoresSim() {
+    const P = this.P;
+    const rel = ((this.opA - this.h) % 360 + 540) % 360 - 180;     // -180..180, positivo = derecha
+    const r = rel * Math.PI / 180, x = this.od * Math.sin(r), y = this.od * Math.cos(r);
+    const ALC = 650, MEDIO = 55;                                   // alcance E3Z y medio ancho del oponente
+    let pres;
+    if (P.ns === 0) {
+      pres = [-50, -30, -10, 10, 30, 50].map(xi => (y > 0 && y < ALC && Math.abs(x - xi) < MEDIO) ? 1 : 0);
+    } else if (P.ns === 2) {
+      const frente = y > 0 && y < ALC;
+      pres = [Math.abs(rel + 90) < 20 && this.od < ALC ? 1 : 0, 0,
+              frente && Math.abs(x + 45) < MEDIO ? 1 : 0, frente && Math.abs(x) < MEDIO ? 1 : 0, frente && Math.abs(x - 45) < MEDIO ? 1 : 0,
+              Math.abs(rel - 90) < 20 && this.od < ALC ? 1 : 0];
+      const ondea = Math.floor(Date.now() / 700) % 3 !== 0;   // la bandera del rival cruza frente a los del frente
+      if (ondea && this.od < 400 && Math.abs(rel - 90) < 25) pres[4] = 1;
+      if (ondea && this.od < 400 && Math.abs(rel + 90) < 25) pres[2] = 1;
+    } else {
+      const frente = y > 0 && y < ALC;
+      pres = [0, Math.abs(rel + 90) < 20 && this.od < ALC ? 1 : 0,
+              frente && Math.abs(x + 10) < MEDIO ? 1 : 0, frente && Math.abs(x - 10) < MEDIO ? 1 : 0,
+              Math.abs(rel - 90) < 20 && this.od < ALC ? 1 : 0, 0];
+      // El rival lleva una bandera: estando a un costado y cerca, a ratos la cruza frente a S3/S4
+      const ondea = Math.floor(Date.now() / 700) % 3 !== 0;
+      if (ondea && this.od < 400 && Math.abs(rel - 90) < 25) pres[3] = 1;
+      if (ondea && this.od < 400 && Math.abs(rel + 90) < 25) pres[2] = 1;
+    }
+    const dist = (y > 0 && Math.abs(x) < MEDIO && y < 1200) ? Math.round(y) : TOF_FUERA;
+    return { pres, dist };
+  }
+  objetivoSim(pres, dist) {
+    const P = this.P;
+    let habil = P.mk & 63; if (P.ns === 1) habil &= 0b011110; if (P.ns === 2) habil &= 0b111101;
+    let conf = 0; pres.forEach((v, i) => { if (v && ((habil >> i) & 1)) conf |= 1 << i; });
+    const tofObj = P.te === 1 && dist < P.da;
+    let obj = 0, vel = 0;
+    const centro = P.ns === 2 ? (!!(conf & 8) || (conf & 0b010100) === 0b010100) : !!(conf & 0b001100);
+    if (centro || tofObj) obj = 1;
+    else {
+      let izqI = false, derI = false, izq, der;
+      if (P.ns === 0) { izqI = !!(conf & 2); derI = !!(conf & 16); izq = izqI || !!(conf & 1); der = derI || !!(conf & 32); }
+      else if (P.ns === 2) { izqI = !!(conf & 4); derI = !!(conf & 16); izq = izqI || !!(conf & 1); der = derI || !!(conf & 32); }
+      else { izq = !!(conf & 2); der = !!(conf & 16); }
+      if (izq && der) { if (izqI && !derI) der = false; else if (derI && !izqI) izq = false; else if (this.ult < 0) der = false; else izq = false; }
+      if (izq || der) { obj = izq ? 2 : 3; vel = P.ns === 1 ? P.gl : P.ns === 2 ? ((izq ? izqI : derI) ? P.gi : P.gl) : ((izq ? izqI : derI) ? P.gi : P.ge); }
+    }
+    if (obj) { this.tVista = Date.now(); if (obj === 2) this.ult = -1; if (obj === 3) this.ult = 1; }
+    return { conf, obj, vel };
+  }
+  ataque() { const P = this.P, mx = Math.max(P.v1, P.v2); this.m = mx > 0 ? [Math.round(P.va * P.v1 / mx), Math.round(P.va * P.v2 / mx)] : [P.va, P.va]; }
+  irAtaque() {
+    if ((this.est === 8 || this.est === 10 || this.est === 5 || this.est === 14) && this.P.fe > 0) { this.m = [0, 0]; this.cambiar(9); }
+    else { this.cambiar(7); this.ataque(); }
+  }
+  buscar() { const P = this.P; this.dirB = P.bd === 0 ? 1 : P.bd === 1 ? -1 : this.ult; this.primero = true; this.cambiar(10); }
+  // Estrategia 2: ¿frente + UN lateral a la vez? (como revisarFlanco() del firmware)
+  revisarFlanco(o, dist) {
+    const P = this.P;
+    let lado = 0;
+    if (P.es === 2 && P.ns !== 0) {
+      const c = P.ns === 2;
+      const fr = !!(o.conf & (c ? 0b011100 : 0b001100)), li = !!(o.conf & (c ? 1 : 2)), ld = !!(o.conf & (c ? 32 : 16));
+      const empujando = P.fd > 0 && dist >= 0 && dist < P.fd;
+      if (fr && li !== ld && !empujando) lado = li ? -1 : 1;
+    }
+    if (lado !== this.ladoC) {
+      this.yaG = lado && this.est === 8 && this.lado8 === lado ? Date.now() - this.t0 : 0;
+      this.velYa = this.velG;
+      this.ladoC = lado; this.tC = Date.now();
+    }
+  }
+  combate(o) {
+    const P = this.P;
+    if (this.ladoC && Date.now() - this.tC >= P.fc && (!this.huboF || Date.now() - this.tFinF >= P.fn)) {
+      this.ladoF = this.ladoC; this.ult = this.ladoC; this.huboF = true; this.tFinF = Date.now();
+      const eq = P.fv > 0 ? this.yaG * (this.velYa || 0) / P.fv : 0;
+      this.msF = Math.max(0, P.ft - eq);
+      this.cambiar(14); this.m = [this.ladoF * P.fv, -this.ladoF * P.fv];
+      return;
+    }
+    if (this.est === 9) {
+      this.m = [0, 0];
+      if (Date.now() - this.t0 < P.fe) return;
+      if (o.obj === 1) { this.cambiar(7); this.ataque(); return; }
+    }
+    if (o.obj === 1) { if (this.est === 7) this.ataque(); else this.irAtaque(); return; }
+    if (o.obj === 2 || o.obj === 3) {
+      const d = o.obj === 3 ? 1 : -1;
+      if (this.est !== 8 || this.lado8 !== d) { this.lado8 = d; this.cambiar(8); }
+      this.velG = o.vel; this.m = [d * o.vel, -d * o.vel]; return;
+    }
+    if (Date.now() - this.tVista < P.me) {
+      if (this.est === 7) { this.ataque(); return; }
+      if (this.est === 8) { this.m = [this.lado8 * this.velG, -this.lado8 * this.velG]; return; }
+    }
+    if (this.est !== 10 && this.est !== 11) this.buscar();
+    const t = Date.now() - this.t0;
+    if (this.est === 10) {
+      this.m = [this.dirB * P.vb, -this.dirB * P.vb];
+      let ms = P.gb * P.mv / 360; if (P.sb === 0 && this.primero) ms /= 2;
+      if (t >= ms) { this.primero = false; if (P.sb === 0) { this.dirB = -this.dirB; this.cambiar(10); } else this.cambiar(11); }
+    } else { this.m = [P.v1, P.v2]; if (t >= P.ta) this.cambiar(10); }
+  }
+  mundo(dt) {
+    const P = this.P;
+    // el oponente se mueve un poco por su cuenta
+    const tt = Date.now() / 1000;
+    this.opA += Math.sin(tt / 1.7) * 30 * dt;
+    if (this.est !== 7) this.od = Math.min(700, Math.max(140, this.od + Math.sin(tt / 2.3) * 60 * dt));
+    if (P.pm === 1 && ![6, 12, 13, 16].includes(this.est)) return;   // prueba sin motores: no se mueve
+    const vb = P.vb || 40, mv = P.mv || 600;
+    const rot = (this.m[0] - this.m[1]) / 2, fwd = (this.m[0] + this.m[1]) / 2;
+    this.h += rot / vb * 360 / (mv / 1000) * dt;
+    const rel = (((this.opA - this.h) % 360 + 540) % 360 - 180) * Math.PI / 180;
+    this.od = Math.max(45, Math.min(900, this.od - fwd * 6 * dt * Math.cos(rel)));
+  }
+  paso() {
+    const P = this.P, dt = 0.1;
+    const resp2 = s => recibir(s + "\n");
+    this.mundo(dt);
+    // superficie del dohyo y color de la línea según lp
+    const fondo = P.lp === 1 ? 420 : 3280, linea = P.lp === 1 ? 3300 : 410;
+    let izq = fondo + Math.round(Math.random() * 120 - 60);
+    let der = fondo - 30 + Math.round(Math.random() * 120 - 60);
+    // modo avance recto: líneas al azar
+    if (this.est === 2 && Date.now() > this.prox) this.lado = [1, 2, 3][Math.floor(Math.random() * 3)];
+    if (this.est === 2 && this.lado) {
+      if (this.lado & 1) izq = linea + Math.round(Math.random() * 60);
+      if (this.lado & 2) der = linea + 30 + Math.round(Math.random() * 60);
+    }
+    // seguimiento: si lo empuja un rato, llegan a la línea
+    const empuja = this.est === 7 || this.est === 15;
+    if (empuja && this.od <= 50) { this.tEmpuje += dt; } else if (!empuja) this.tEmpuje = 0;
+    if (empuja && this.tEmpuje > 0.9) { izq = linea; der = linea + 20; }
+    const enL = (v, u) => P.lp === 1 ? v > u : v < u;
+    // en "solo seguimiento" se ignora la línea (salvo en la prueba recta)
+    const usarBorde = P.mo !== 2 || this.est === 13;
+    const lI = usarBorde && enL(izq, P.ui), lD = usarBorde && enL(der, P.ud);
+    if (!usarBorde && this.est === 7 && this.tEmpuje > 1.5) {   // sin borde: lo saca del dohyo y aparece otro
+      this.od = 480; this.opA = this.h + 180 + (Math.random() * 120 - 60); this.tEmpuje = 0;
+    }
+    const sens = this.sensoresSim();
+    const o = this.objetivoSim(sens.pres, sens.dist);
+    this.revisarFlanco(o, sens.dist);
+    const t = Date.now() - this.t0;
+    const retorno = () => {
+      this.ret++; this.lado = 0; this.prox = Date.now() + 1200 + Math.random() * 2500; this.tEmpuje = 0;
+      this.giro = lI && !lD ? 1 : lD && !lI ? -1 : P.gd === 0 ? 1 : P.gd === 1 ? -1 : (this.alt = !this.alt) ? 1 : -1;
+      this.m = [0, 0]; this.cambiar(P.tf > 0 ? 3 : 4);
+      if (this.od <= 60) { this.od = 480; this.opA = this.h + 180 + (Math.random() * 120 - 60); }   // el oponente "vuelve" al dohyo
+    };
+    switch (this.est) {
+      case 0: this.m = [0, 0]; break;
+      case 1: this.m = [0, 0]; if (t >= P.ea) { if (P.mo !== 0) { this.buscar(); this.combate(o); } else this.cambiar(2); } break;
+      case 2:
+        if (lI || lD) retorno();
+        else if (P.mo !== 0) { this.buscar(); this.combate(o); }
+        else this.m = [P.v1, P.v2];
+        break;
+      case 3: this.m = [0, 0]; if (t >= P.tf) this.cambiar(4); break;
+      case 4: this.m = [-P.vr, -P.vr]; if (t >= P.tr) this.cambiar(5); break;
+      case 5:
+        if (P.mo !== 0 && o.obj === 1) this.irAtaque();
+        else { this.m = [this.giro * P.vg, -this.giro * P.vg]; if (t >= P.tg) { if (P.mo !== 0) this.buscar(); else this.cambiar(2); } }
+        break;
+      case 6:
+        if (Date.now() - this.tMan > 400) { this.m = [0, 0]; this.cambiar(0); resp2("# Manual: sin comandos, detenido"); }
+        else this.m = this.m.map((v, i) => v + Math.max(-12, Math.min(12, this.man[i] - v)));   // rampa aproximada
+        break;
+      case 7: case 8: case 9: case 10: case 11:
+        if (lI || lD) retorno();
+        else if (P.mo === 0) this.cambiar(2);
+        else this.combate(o);
+        break;
+      case 12:
+        this.m = [P.vb, -P.vb];
+        if (t >= P.mv) { this.m = [0, 0]; this.cambiar(0); resp2("# Vuelta de calibracion terminada"); }
+        break;
+      case 13:
+        if (lI || lD) { this.m = [0, 0]; this.cambiar(0); resp2("# Prueba recta detenida: toco la linea"); }
+        else { this.m = [this.pv, this.pv]; if (t >= this.pms) { this.m = [0, 0]; this.cambiar(0); resp2("# Prueba recta terminada"); } }
+        break;
+      case 14:   // flanco: giro ciego
+        if (lI || lD) retorno();
+        else if (P.mo === 0) this.cambiar(2);
+        else if (t < this.msF) this.m = [this.ladoF * P.fv, -this.ladoF * P.fv];
+        else if (P.fa > 0) { this.m = [0, 0]; this.cambiar(15); }
+        else { this.tFinF = Date.now(); this.combate(o); }
+        break;
+      case 15:   // embestida: ataque comprometido
+        if (lI || lD) retorno();
+        else if (P.mo === 0) this.cambiar(2);
+        else if (t < P.fe) this.m = [0, 0];
+        else if (t < P.fe + P.fa) this.ataque();
+        else { this.tFinF = Date.now(); this.cambiar(7); this.combate(o); }
+        break;
+      case 16:   // prueba del giro de flanco
+        this.m = [this.ladoF * P.fv, -this.ladoF * P.fv];
+        if (t >= P.ft) { this.m = [0, 0]; this.cambiar(0); resp2("# Giro de flanco terminado"); }
+        break;
+    }
+    const desp = P.sd === 1 && ![0, 6, 12, 13, 16].includes(this.est);
+    let s1 = desp ? P.b1 : P.a1, s2 = desp ? P.b2 : P.a2;
+    if (this.est === 0 && this.vista && Date.now() - this.vista.t < 1500) {
+      if (this.vista.i === 0) s1 = this.vista.v; else s2 = this.vista.v;
+    }
+    // compensación de motores (como en el firmware)
+    const mc = this.m.map((v, i) => Math.round(v * (v >= 0 ? (i ? P.c2 : P.c1) : (i ? P.c4 : P.c3)) / 100));
+    recibir(`T,${this.est},${izq},${der},${mc[0]},${mc[1]},${this.ret},${s1},${s2}\n`);
+    recibir(`S,${sens.pres.join(",")},${sens.dist},${o.conf},${o.obj}\n`);
+  }
+  cerrar() { clearInterval(this.timer); }
+}
+
+// ================== Conexión ==================
+function setConectado(nombre, demo) {
+  const pill = $("#pillCon");
+  if (nombre) {
+    pill.textContent = demo ? "DEMO" : "CONECTADO";
+    pill.className = "pill " + (demo ? "demo" : "on");
+    $("#btnCon").textContent = "Desconectar";
+    $("#btnDemo").style.display = "none";
+  } else {
+    pill.textContent = "DESCONECTADO";
+    pill.className = "pill off";
+    $("#btnCon").textContent = "Conectar";
+    $("#btnDemo").style.display = "";
+    $("#pillRobot").textContent = "ROBOT —";
+    telemetria(0, 0, 0, 0, 0, Number($("#retornos").textContent) || 0);
+    historial[0].length = 0;
+    historial[1].length = 0;
+    $("#chipEstado").textContent = "—";
+    if (typeof presencia === "function" && $("#presGrid").children.length) {
+      presencia([0, 0, 0, 0, 0, 0], undefined);
+      tramasS = 0;
+    }
+  }
+}
+
+function desconectado(motivo) {
+  if (!enlace) return;
+  if (armado) armar(false);
+  enlace.cerrar();
+  enlace = null;
+  setConectado(null);
+  log(motivo || "Desconectado", "#f59e0b");
+}
+
+async function conectar(demo) {
+  if (enlace) return desconectado("Desconectado");
+  const e = demo ? new EnlaceDemo() : new EnlaceBLE();
+  try {
+    const nombre = await e.conectar();
+    enlace = e;
+    setConectado(nombre, demo);
+    log(`Conectado a ${nombre}`, "#22c55e");
+    enviar("I");
+    setTimeout(() => enviar("G"), 150);
+  } catch (err) {
+    if (err && err.name !== "NotFoundError") log("No se pudo conectar: " + err.message, "#ef4444");
+  }
+}
+
+// ================== Eventos ==================
+$$(".param[data-param]").forEach(crearDeslizador);
+$$(".seg").forEach(seg => {
+  const k = seg.dataset.param;
+  $$("button", seg).forEach(b => b.addEventListener("click", () => cambiarLocal(k, Number(b.dataset.v), true)));
+});
+for (const k in PARAMS) pintarParam(k);
+
+$("#btnCon").addEventListener("click", () => conectar(false));
+$("#btnDemo").addEventListener("click", () => conectar(true));
+$("#btnGo").addEventListener("click", () => enviar("R"));
+$("#btnStop").addEventListener("click", () => enviar("X"));
+$("#btnGuardar").addEventListener("click", () => enviar("W"));
+$("#btnLeer").addEventListener("click", () => enviar("G"));
+$("#btnFabrica").addEventListener("click", () => {
+  if (confirm("¿Restaurar los valores de fábrica? (no se guardan en la flash hasta que presiones Guardar)")) enviar("D");
+});
+$("#swEnlace").addEventListener("click", e => e.currentTarget.classList.toggle("on"));
+
+$$("[data-cap]").forEach(b => b.addEventListener("click", () => {
+  const [i, tipo] = b.dataset.cap.split(",");
+  const h = historial[i];
+  if (!h.length) return log("Conecta el robot para capturar lecturas", "#f59e0b");
+  const v = Math.round(h.reduce((a, x) => a + x, 0) / h.length);
+  calib[i][tipo] = v;
+  b.textContent = (tipo === "negro" ? "■ " : "□ ") + v;
+}));
+$$("[data-auto]").forEach(b => b.addEventListener("click", () => {
+  const i = Number(b.dataset.auto), c = calib[i];
+  if (c.negro === undefined || c.blanco === undefined) return log("Captura negro y blanco primero", "#f59e0b");
+  if (c.negro <= c.blanco) return log("Negro debe ser mayor que blanco: revisa el sensor", "#ef4444");
+  cambiarLocal(i === 0 ? "ui" : "ud", Math.round((c.negro + c.blanco) / 2), true);
+}));
+
+// Detener con la tecla Espacio (computadora)
+document.addEventListener("keydown", e => {
+  if (e.code === "Space" && !["INPUT", "BUTTON"].includes(document.activeElement.tagName)) { e.preventDefault(); desarmar(); enviar("X"); }
+});
+
+// Compatibilidad de Web Bluetooth
+if (!navigator.bluetooth) {
+  const ios = /iPhone|iPad|iPod/.test(navigator.userAgent);
+  const a = $("#avisoBT");
+  a.style.display = "block";
+  a.innerHTML = ios
+    ? "Safari en iPhone no soporta Web Bluetooth. Abre esta página en la app <b>Bluefy</b> o usa Chrome en Android o en la computadora. Puedes probar la interfaz con <b>Demo</b>."
+    : "Este navegador no soporta Web Bluetooth. Usa <b>Chrome</b> o <b>Edge</b> (Android, Windows, macOS o Linux) y abre la página por <b>https</b>. Puedes probar la interfaz con <b>Demo</b>.";
+  $("#btnCon").disabled = true;
+}
+crearVistaSensores();
+construirVistaSeg();
+iniciarManejo();
+$("#btnGo2").addEventListener("click", () => enviar("R"));
+$("#btnStop2").addEventListener("click", () => enviar("X"));
+$("#btnTodos").addEventListener("click", () => cambiarLocal("mk", 63, true));
+function stepperLocal(id, paso) {
+  const inp = $("#" + id);
+  const fijar = d => {
+    const v = Math.min(Number(inp.max), Math.max(Number(inp.min), (Number(inp.value) || 0) + d));
+    inp.value = v;
+    try { localStorage.setItem(id, v); } catch (e) {}
+  };
+  try { const v = localStorage.getItem(id); if (v) inp.value = v; } catch (e) {}
+  repetir($("#" + id + "Menos"), m => fijar(-paso * m));
+  repetir($("#" + id + "Mas"), m => fijar(paso * m));
+  inp.addEventListener("change", () => fijar(0));
+}
+stepperLocal("pruebaVel", 5);
+stepperLocal("pruebaMs", 100);
+const pruebaRecta = dir => {
+  if (!enlace) return log("Conecta el robot primero", "#f59e0b");
+  if (ultimoEstado !== 0) return log("Detén el robot antes de la prueba recta", "#f59e0b");
+  enviar(`A,${dir * (Number($("#pruebaVel").value) || 50)},${Number($("#pruebaMs").value) || 1000}`);
+};
+$("#btnPruebaAd").addEventListener("click", () => pruebaRecta(1));
+$("#btnPruebaAt").addEventListener("click", () => pruebaRecta(-1));
+$("#btnVuelta").addEventListener("click", () => {
+  if (ultimoEstado !== 0) return log("Detén el robot antes de probar la vuelta", "#f59e0b");
+  enviar("V");
+});
+construirEstrategias();
+$("#btnGo3").addEventListener("click", () => enviar("R"));
+$("#btnStop3").addEventListener("click", () => enviar("X"));
+const probarFlanco = dir => {
+  if (!enlace) return log("Conecta el robot primero", "#f59e0b");
+  if (ultimoEstado !== 0) return log("Detén el robot antes de probar el giro", "#f59e0b");
+  enviar(`F,${dir}`);
+};
+$("#btnFlancoIzq").addEventListener("click", () => probarFlanco(-1));
+$("#btnFlancoDer").addEventListener("click", () => probarFlanco(1));
+$$(".tabs button").forEach(b => b.addEventListener("click", () => cambiarPestana(b.dataset.tab)));
+$("#umbralDist").addEventListener("change", () => {
+  try { localStorage.setItem("umbralDist", $("#umbralDist").value); } catch (e) {}
+});
+try {
+  const u = localStorage.getItem("umbralDist"); if (u) $("#umbralDist").value = u;
+  const t = localStorage.getItem("pestana"); if (["sensores", "manejo", "seguimiento", "estrategia"].includes(t)) cambiarPestana(t);
+} catch (e) {}
+setConectado(null);
+pintarLineaTiempo();
+if (new URLSearchParams(location.search).has("demo")) conectar(true);
+</script>
+</body>
+</html>
